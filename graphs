@@ -1,0 +1,14 @@
+#!/usr/bin/env python3
+"""Top level script which runs graphs."""
+
+import os
+import sys
+
+libs_path = os.path.dirname(os.path.abspath(__file__)) + '/libs/'
+sys.path.insert(0, libs_path)
+
+import src.main
+
+# Run
+app = src.main.main()
+app.mainloop()
