@@ -10,3 +10,5 @@ Make sure you have all dependencies installed: `tkinter` and `PIL`.
 For ubuntu: 
 ```sudo apt-get install python3-pil.imagetk python3-tk```
 
+Run with `python3 graphs` in the root directory.
+
