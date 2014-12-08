@@ -144,7 +144,6 @@ class MainWin(Win):
         # (De)select vertices
         if self.mouseDownButton == 3 and oldHoverVertex != self.graphInteraction.hoverVertex:
             self.graphInteraction.keymap['RMB']()
-            print('hover select')
         # Update the mouse position
         self.mousePos = p
         self.redraw()
