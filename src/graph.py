@@ -62,6 +62,24 @@ class Graph(GraphBase):
         b.edges.remove(e)
 
 
+class TreeDecomposition(Graph):
+    """A tree decomposition of a graph"""
+    def __init__(self, originalGraph):
+        self.originalGraph = originalGraph
+        GraphBase.__init__(self)
+
+    def cost(self, vidA, vidB):
+        return 1
+
+    def addVertex(self, v):
+        if type(v) is Bag: # , "Added vertex must be of type 'Bag'"
+            return GraphBase.addVertex(self, v)
+        elif type(v) is Vertex:
+            return self.originalGraph.addVertex(v)
+        else:
+            raise TypeError("Added vertex must be of type 'Vertex' or 'Bag'")
+
+
 #
 # Vertices
 #
@@ -98,6 +116,18 @@ class Vertex(VertexBase):
                 if e.other(self).vid == vid:
                     return e
         return None
+
+
+class Bag(Vertex):
+    def __init__(self, vertexId, pos, edges=None):
+        Vertex.__init__(self, vertexId, pos, edges)
+        self.vertices = [] # A list of pointers to the vertices in this bag.
+
+    def addVertex(self, v):
+        """Add a vertex from the original graph to this bag"""
+        # assert v in self.originalGraph
+        if v not in self.vertices:
+            self.vertices.append(v)
 
 
 #

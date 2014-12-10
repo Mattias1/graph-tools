@@ -25,36 +25,45 @@ class MainWin(Win):
         # Draw myself
         self.fullClear()
         self.drawHelp()
-        self.drawGraph()
+        self.drawGraph(self.graphInteraction.graph)
+        if type(self.graphInteraction.graph) == TreeDecomposition:
+            self.drawGraph(self.graphInteraction.graph.originalGraph)
 
-    def drawGraph(self):
+    def drawGraph(self, graph):
         """Draw the graph"""
         # The offset for selected vertices
         selectedVs = self.graphInteraction.selectedVertices
         offset = self.mousePos - self.mouseDownStartPos if self.mouseDownButton == 1 else Pos(0, 0)
 
-        # Draw the hovered vertex
-        if self.graphInteraction.hoverVertex:
-            ofs = offset if self.graphInteraction.hoverVertex in selectedVs else Pos(0, 0)
-            self.drawDisc(self.colors.hover, self.graphInteraction.hoverVertex.pos + ofs, self.settings.selectradius)
-
         # Draw all edges
-        for v in self.graphInteraction.graph.vertices:
+        for v in graph.vertices:
             for e in v.edges:
                 if v.vid < e.other(v).vid:
                     ofsA = offset if v in selectedVs else Pos(0, 0)
                     ofsB = offset if e.other(v) in selectedVs else Pos(0, 0)
                     self.drawLine(self.colors.edge, v.pos + ofsA, e.other(v).pos + ofsB)
 
+        # Draw the hovered vertex
+        if self.graphInteraction.hoverVertex:
+            ofs = offset if self.graphInteraction.hoverVertex in selectedVs else Pos(0, 0)
+            self.drawDisc(self.colors.hover, self.graphInteraction.hoverVertex.pos + ofs, self.settings.selectradius)
+
         # Draw all vertices
-        for v in self.graphInteraction.graph.vertices:
+        for v in graph.vertices:
+            # Draw the disc
+            isBag = type(v) == Bag
             c = self.colors.normal if self.settings.drawsmall else self.colors.hover
-            c = self.colors.selected if v in self.graphInteraction.selectedVertices else c
+            c = self.colors.selected if v in selectedVs else c
             r = self.settings.vertexradiussmall if self.settings.drawsmall else self.settings.vertexradiusbig
+            if isBag: r *= self.settings.bagfactor
             ofs = offset if v in selectedVs else Pos(0, 0)
             self.drawDisc(c, v.pos + ofs, r)
-            c = self.colors.selectedtext if v in self.graphInteraction.selectedVertices else self.colors.text
-            self.drawString(str(v.vid), c, v.pos + ofs + (0, 2), 'c')
+
+            # Draw the text
+            bagText = (": " + ' '.join(map(lambda x: str(x.vid), v.vertices)) if isBag else "")
+            c = self.colors.selectedtext if v in selectedVs else self.colors.text
+            f = (lambda x: chr(x.vid + ord('a'))) if self.settings.drawtext else lambda x: str(x.vid)
+            self.drawString(f(v) + bagText, c, v.pos + ofs, 'c')
 
     def drawHelp(self):
         """Draw help text"""
@@ -105,16 +114,13 @@ class MainWin(Win):
         #         self.draw()
 
     def onMouseDown(self, p, btnNr):
-        # (De)select vertices
+        self.mouseDownStartPos = p
         if btnNr == 3:
             self.mouseDownButton = 3
             self.graphInteraction.keymap['RMB']()
         if btnNr == 1:
-            # (De)Select vertex
-            if not self.graphInteraction.keymap['LMB']():
-                # If no vertex is selected, move the selected vertices
-                self.mouseDownButton = 1
-                self.mouseDownStartPos = p
+            self.mouseDownButton = 1
+            self.graphInteraction.keymap['LMB']()
             # Hit scrollbar button
             self.scrollbarClicks(p)
     def onMouseDownDouble(self, p, btnNr):
@@ -141,6 +147,12 @@ class MainWin(Win):
             if p.distanceSqTo(v.pos) < distance * distance:
                 distance = p.distanceTo(v.pos)
                 self.graphInteraction.hoverVertex = v
+        if self.graphInteraction.graph.originalGraph:
+            distance = self.settings.selectradius * self.settings.bagfactor
+            for v in self.graphInteraction.graph.originalGraph.vertices:
+                if p.distanceSqTo(v.pos) < distance * distance:
+                    distance = p.distanceTo(v.pos)
+                    self.graphInteraction.hoverVertex = v
         # (De)select vertices
         if self.mouseDownButton == 3 and oldHoverVertex != self.graphInteraction.hoverVertex:
             self.graphInteraction.keymap['RMB']()
@@ -152,13 +164,19 @@ class MainWin(Win):
         pass
 
     def onMouseUp(self, p, btnNr):
-        # Deselect
+        # Deselect scrollbar
         self.selectedScrollbar = -1
 
-        # Fire final mouse event
-        if self.mouseDownButton == 1 and self.mouseDownStartPos != (-1, -1):
-            for v in self.graphInteraction.selectedVertices:
-                v.pos += p - self.mouseDownStartPos
+        # Place vertices in a bag
+        if type(self.graphInteraction.graph) == TreeDecomposition and type(self.graphInteraction.hoverVertex) == Bag:
+            for v in filter(lambda v: type(v) != Bag, self.graphInteraction.selectedVertices):
+                self.graphInteraction.hoverVertex.addVertex(v)
+        # Move vertices
+        elif self.mouseDownButton == 1 and self.mouseDownStartPos != (-1, -1):
+                for v in self.graphInteraction.selectedVertices:
+                    v.pos += p - self.mouseDownStartPos
+
+        # Clean up
         self.mouseDownStartPos = Pos(-1, -1)
         self.mouseDownButton = -1
 

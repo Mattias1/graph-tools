@@ -6,7 +6,7 @@ from contextlib import suppress
 class GraphInteraction():
     def __init__(self, mainWin):
         self.initKeymap()
-        self.graph = Graph()
+        self.graph = TreeDecomposition(Graph())
         self.hoverVertex = None
         self.hoverEdge = None
         self.selectedVertices = [] # List with vertex ids
@@ -22,8 +22,11 @@ class GraphInteraction():
             'a': self.selectAll,
             'Esc': self.deselect,
             'v': self.addVertex,
+            'b': self.addBag,
             'd': self.removeVertices,
             'c': self.cliqueify,
+            'p': self.pathify,
+            '1': self.toggleDrawText,
             'Ctrl-c': self.quit
         }
 
@@ -40,8 +43,13 @@ class GraphInteraction():
 
     def selectAll(self):
         """(De)select all vertices"""
-        if len(self.selectedVertices) == len(self.graph.vertices):
+        if self.selectedVertices == self.graph.vertices and self.selectedVertices != []:
             self.selectedVertices = []
+        elif self.graph.originalGraph:
+            if self.selectedVertices == self.graph.originalGraph.vertices:
+                self.selectedVertices = list(self.graph.vertices)
+            else:
+                self.selectedVertices = list(self.graph.originalGraph.vertices)
         else:
             self.selectedVertices = list(self.graph.vertices)
         self.redraw()
@@ -53,9 +61,21 @@ class GraphInteraction():
 
     def addVertex(self):
         """Add a vertex at the mouse position"""
+        workGraph = self.graph.originalGraph if type(self.graph) == TreeDecomposition else self.graph
         if self.hoverVertex != None or self.hoverEdge != None:
             return False
-        if not self.graph.addVertex(Vertex(len(self.graph.vertices), self.mainWin.mousePos)):
+        if not workGraph.addVertex(Vertex(len(workGraph.vertices), self.mainWin.mousePos)):
+            return False
+        self.hoverVertex = workGraph.vertices[-1]
+        self.redraw()
+
+    def addBag(self):
+        """Add a bag at the mouse position"""
+        if type(self.graph) != TreeDecomposition:
+            return False
+        if self.hoverVertex != None or self.hoverEdge != None:
+            return False
+        if not self.graph.addVertex(Bag(len(self.graph.vertices), self.mainWin.mousePos)):
             return False
         self.hoverVertex = self.graph.vertices[-1]
         self.redraw()
@@ -67,19 +87,52 @@ class GraphInteraction():
 
     def cliqueify(self):
         """Add or remove edges between all selected vertices"""
+        if len(self.selectedVertices) < 2:
+            return False
         result = False
+        workGraph = self.graph
+        if type(self.graph) == TreeDecomposition and type(self.selectedVertices[0]) != Bag:
+            workGraph = self.graph.originalGraph 
         # Add clique edges
         for a in self.selectedVertices:
             for b in self.selectedVertices:
                 if a != b:
-                    if self.graph.addEdge(a.vid, b.vid):
+                    if workGraph.addEdge(a.vid, b.vid):
                         result = True
         # If no edges were added, remove all edges
         if not result:
             for a in self.selectedVertices:
                 for b in self.selectedVertices:
                     if a.vid < b.vid:
-                        self.graph.removeEdge(a.vid, b.vid)
+                        workGraph.removeEdge(a.vid, b.vid)
+        self.redraw()
+
+    def pathify(self):
+        """Creating a path, a tour or removing all edges between consecutive vertices"""
+        if len(self.selectedVertices) < 2:
+            return False
+        result = False
+        workGraph = self.graph
+        if type(self.graph) == TreeDecomposition and type(self.selectedVertices[0]) != Bag:
+            workGraph = self.graph.originalGraph 
+        # Add path edges
+        for i in range(len(self.selectedVertices) - 1):
+            if workGraph.addEdge(i, i + 1):
+                result = True
+        # Add tour edge
+        if not result:
+            result = workGraph.addEdge(0, len(self.selectedVertices) - 1)
+        # If no edges were added, remove all edges
+        if not result:
+            for i in range(len(self.selectedVertices) - 1):
+                workGraph.removeEdge(i, i + 1)
+            if len(self.selectedVertices) > 2:
+                workGraph.removeEdge(0, len(self.selectedVertices) - 1)
+        self.redraw()
+
+    def toggleDrawText(self):
+        """Toggle drawtext settings"""
+        self.mainWin.settings.drawtext = not self.mainWin.settings.drawtext
         self.redraw()
 
     def quit(self):

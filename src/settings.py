@@ -12,10 +12,11 @@ class Settings():
         self.offset = Pos(40, 20)
         self.font = ('Consolas', 10)
         self.drawsmall = False
-        self.drwatext = True
+        self.drawtext = True
         self.vertexradiussmall = 4      #px
         self.vertexradiusbig = 20       #px
         self.selectradius = 30          #px
+        self.bagfactor = 3
         self.scrollbars = 'none'
         self.fps_inv = 1/30             # seconds per frame
         self.colors = colors.Colors()
