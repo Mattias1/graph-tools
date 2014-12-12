@@ -75,7 +75,7 @@ class GraphInteraction():
 
     def addBag(self):
         """Add a bag at the mouse position"""
-        if self.isTreeDecomposition:
+        if not self.isTreeDecomposition:
             return False
         if self.hoverVertex != None or self.hoverEdge != None:
             return False

@@ -16,6 +16,10 @@ class MainWin(Win):
 
         self.graphInteraction = GraphInteraction(self)
 
+    @property
+    def isTreeDecomposition(self):
+        return self.graphInteraction.isTreeDecomposition
+
     def redraw(self):
         """Mark the window for redrawing"""
         self.redrawMarker = True
@@ -174,7 +178,6 @@ class MainWin(Win):
                 if self.graphInteraction.hoverVertex.addVertex(v):
                     result = True
             if not result:
-                print('remove vertices from bag')
                 for v in filter(lambda v: type(v) != Bag, self.graphInteraction.selectedVertices):
                     self.graphInteraction.hoverVertex.removeVertex(v)
         # Move vertices
