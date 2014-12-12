@@ -26,7 +26,7 @@ class MainWin(Win):
         self.fullClear()
         self.drawHelp()
         self.drawGraph(self.graphInteraction.graph)
-        if self.isTreeDecompositionTreeDecomposition:
+        if self.isTreeDecomposition:
             self.drawGraph(self.graphInteraction.graph.originalGraph)
 
     def drawGraph(self, graph):
@@ -168,7 +168,7 @@ class MainWin(Win):
         self.selectedScrollbar = -1
 
         # Place vertices in a bag (or remove them)
-        if self.isTreeDecompositionTreeDecomposition and type(self.graphInteraction.hoverVertex) == Bag:
+        if self.isTreeDecomposition and type(self.graphInteraction.hoverVertex) == Bag:
             result = False
             for v in filter(lambda v: type(v) != Bag, self.graphInteraction.selectedVertices):
                 if self.graphInteraction.hoverVertex.addVertex(v):
