@@ -11,6 +11,7 @@ class GraphInteraction():
         self.hoverEdge = None
         self.selectedVertices = [] # List with vertex ids
         self.mainWin = mainWin
+        self.isTreeDecomposition = type(self.graph) == TreeDecomposition
 
     def redraw(self):
         self.mainWin.redraw()
@@ -30,6 +31,9 @@ class GraphInteraction():
             'Ctrl-c': self.quit
         }
 
+    #
+    # Graph editing tools
+    #
     def selectVertex(self):
         """(De)select a vertex"""
         if not self.hoverVertex:
@@ -61,7 +65,7 @@ class GraphInteraction():
 
     def addVertex(self):
         """Add a vertex at the mouse position"""
-        workGraph = self.graph.originalGraph if type(self.graph) == TreeDecomposition else self.graph
+        workGraph = self.graph.originalGraph if self.isTreeDecomposition else self.graph
         if self.hoverVertex != None or self.hoverEdge != None:
             return False
         if not workGraph.addVertex(Vertex(len(workGraph.vertices), self.mainWin.mousePos)):
@@ -71,7 +75,7 @@ class GraphInteraction():
 
     def addBag(self):
         """Add a bag at the mouse position"""
-        if type(self.graph) != TreeDecomposition:
+        if self.isTreeDecomposition:
             return False
         if self.hoverVertex != None or self.hoverEdge != None:
             return False
@@ -91,7 +95,7 @@ class GraphInteraction():
             return False
         result = False
         workGraph = self.graph
-        if type(self.graph) == TreeDecomposition and type(self.selectedVertices[0]) != Bag:
+        if self.isTreeDecomposition and type(self.selectedVertices[0]) != Bag:
             workGraph = self.graph.originalGraph 
         # Add clique edges
         for a in self.selectedVertices:
@@ -113,21 +117,22 @@ class GraphInteraction():
             return False
         result = False
         workGraph = self.graph
-        if type(self.graph) == TreeDecomposition and type(self.selectedVertices[0]) != Bag:
+        sv = self.selectedVertices
+        if self.isTreeDecomposition and type(self.selectedVertices[0]) != Bag:
             workGraph = self.graph.originalGraph 
         # Add path edges
-        for i in range(len(self.selectedVertices) - 1):
-            if workGraph.addEdge(i, i + 1):
+        for i in range(len(sv) - 1):
+            if workGraph.addEdge(sv[i].vid, sv[i + 1].vid):
                 result = True
         # Add tour edge
         if not result:
-            result = workGraph.addEdge(0, len(self.selectedVertices) - 1)
+            result = workGraph.addEdge(sv[0].vid, sv[-1].vid)
         # If no edges were added, remove all edges
         if not result:
-            for i in range(len(self.selectedVertices) - 1):
-                workGraph.removeEdge(i, i + 1)
-            if len(self.selectedVertices) > 2:
-                workGraph.removeEdge(0, len(self.selectedVertices) - 1)
+            for i in range(len(sv) - 1):
+                workGraph.removeEdge(sv[i].vid, sv[i + 1].vid)
+            if len(sv) > 2:
+                workGraph.removeEdge(sv[0].vid, sv[-1].vid)
         self.redraw()
 
     def toggleDrawText(self):
@@ -135,6 +140,15 @@ class GraphInteraction():
         self.mainWin.settings.drawtext = not self.mainWin.settings.drawtext
         self.redraw()
 
+    #
+    # Algorithms
+    #
+    def tspDP(self):
+        pass
+
+    #
+    # Misc
+    #
     def quit(self):
         """Quit"""
         self.mainWin.quit()

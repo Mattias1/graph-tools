@@ -73,7 +73,8 @@ class TreeDecomposition(Graph):
 
     def addVertex(self, v):
         if type(v) is Bag: # , "Added vertex must be of type 'Bag'"
-            return GraphBase.addVertex(self, v)
+            self.vertices.append(v)
+            return True
         elif type(v) is Vertex:
             return self.originalGraph.addVertex(v)
         else:
@@ -126,8 +127,18 @@ class Bag(Vertex):
     def addVertex(self, v):
         """Add a vertex from the original graph to this bag"""
         # assert v in self.originalGraph
+        result = False
         if v not in self.vertices:
             self.vertices.append(v)
+            result = True
+        return result
+
+    def removeVertex(self, v):
+        """Remove a vertex from the bag"""
+        if v in self.vertices:
+            self.vertices.remove(v)
+            return True
+        return False
 
 
 #

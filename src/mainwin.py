@@ -26,7 +26,7 @@ class MainWin(Win):
         self.fullClear()
         self.drawHelp()
         self.drawGraph(self.graphInteraction.graph)
-        if type(self.graphInteraction.graph) == TreeDecomposition:
+        if self.isTreeDecompositionTreeDecomposition:
             self.drawGraph(self.graphInteraction.graph.originalGraph)
 
     def drawGraph(self, graph):
@@ -60,9 +60,9 @@ class MainWin(Win):
             self.drawDisc(c, v.pos + ofs, r)
 
             # Draw the text
-            bagText = (": " + ' '.join(map(lambda x: str(x.vid), v.vertices)) if isBag else "")
-            c = self.colors.selectedtext if v in selectedVs else self.colors.text
             f = (lambda x: chr(x.vid + ord('a'))) if self.settings.drawtext else lambda x: str(x.vid)
+            bagText = (": " + ' '.join(map(f, v.vertices)) if isBag else "")
+            c = self.colors.selectedtext if v in selectedVs else self.colors.text
             self.drawString(f(v) + bagText, c, v.pos + ofs, 'c')
 
     def drawHelp(self):
@@ -167,14 +167,20 @@ class MainWin(Win):
         # Deselect scrollbar
         self.selectedScrollbar = -1
 
-        # Place vertices in a bag
-        if type(self.graphInteraction.graph) == TreeDecomposition and type(self.graphInteraction.hoverVertex) == Bag:
+        # Place vertices in a bag (or remove them)
+        if self.isTreeDecompositionTreeDecomposition and type(self.graphInteraction.hoverVertex) == Bag:
+            result = False
             for v in filter(lambda v: type(v) != Bag, self.graphInteraction.selectedVertices):
-                self.graphInteraction.hoverVertex.addVertex(v)
+                if self.graphInteraction.hoverVertex.addVertex(v):
+                    result = True
+            if not result:
+                print('remove vertices from bag')
+                for v in filter(lambda v: type(v) != Bag, self.graphInteraction.selectedVertices):
+                    self.graphInteraction.hoverVertex.removeVertex(v)
         # Move vertices
         elif self.mouseDownButton == 1 and self.mouseDownStartPos != (-1, -1):
-                for v in self.graphInteraction.selectedVertices:
-                    v.pos += p - self.mouseDownStartPos
+            for v in self.graphInteraction.selectedVertices:
+                v.pos += p - self.mouseDownStartPos
 
         # Clean up
         self.mouseDownStartPos = Pos(-1, -1)
