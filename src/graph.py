@@ -123,6 +123,7 @@ class Bag(Vertex):
     def __init__(self, vertexId, pos, edges=None):
         Vertex.__init__(self, vertexId, pos, edges)
         self.vertices = [] # A list of pointers to the vertices in this bag.
+        self.parent = None
 
     def addVertex(self, v):
         """Add a vertex from the original graph to this bag"""

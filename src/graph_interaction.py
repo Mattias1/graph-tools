@@ -28,6 +28,7 @@ class GraphInteraction():
             'c': self.cliqueify,
             'p': self.pathify,
             '1': self.toggleDrawText,
+            'q': self.tspDP,
             'Ctrl-c': self.quit
         }
 
@@ -144,7 +145,33 @@ class GraphInteraction():
     # Algorithms
     #
     def tspDP(self):
+        """Compute the smallest tour using DP on a tree decomposition"""
+        if not self.isTreeDecomposition or len(self.graph.vertices) < 1:
+            return
+        rootid = self.createRoot().vid
+        value = self.tspA(0, 0)
+
+    def tspA(self, S, i):
         pass
+
+    def tspB(self, S, i, j):
+        pass
+
+    def createRoot(self, rootBag=None):
+        """Make the tree decomposition a true tree, by choosing a root and setting all parent pointers correctly"""
+        # Choose the first bag as root if none is given
+        if rootBag == None:
+            rootBag = self.graph.vertices[0]
+        # Define a local function that sets the parent of a bag recursively
+        def setParentRecursive(bag, parent):
+            bag.parent = parent
+            for e in bag.edges:
+                child = e.other(bag)
+                if not parent or bag.parent != child:
+                    setParentRecursive(child, bag)
+        # Set the parent for all bags
+        setParentRecursive(rootBag, None)
+        return rootBag
 
     #
     # Misc

@@ -65,7 +65,10 @@ class MainWin(Win):
 
             # Draw the text
             f = (lambda x: chr(x.vid + ord('a'))) if self.settings.drawtext else lambda x: str(x.vid)
-            bagText = (": " + ' '.join(map(f, v.vertices)) if isBag else "")
+            bagText = ""
+            if isBag:
+                bagText = "\n" if not v.parent else ("\nparent: " + f(v.parent) + "\n")
+                bagText += "v: " + ' '.join(map(f, v.vertices))
             c = self.colors.selectedtext if v in selectedVs else self.colors.text
             self.drawString(f(v) + bagText, c, v.pos + ofs, 'c')
 
