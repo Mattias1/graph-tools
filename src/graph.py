@@ -45,7 +45,8 @@ class Graph(GraphBase):
         assert type(v) is Vertex, "Added vertices to this type of Graph must be of type 'Vertex'"
         return GraphBase.addVertex(self, v)
 
-    def addEdge(self, vidA, vidB, cost=0):
+    def addEdge(self, vidA, vidB, cost=1):
+        print("DEBUG |v|: {}, vid a: {}, vid b: {}, cost: {}".format(len(self.vertices), vidA, vidB, cost))
         edge = Edge(self.vertices[vidA], self.vertices[vidB], cost)
         result = False
         if edge.a.addEdge(edge):
@@ -123,7 +124,7 @@ class Bag(Vertex):
     def __init__(self, vertexId, pos, edges=None):
         Vertex.__init__(self, vertexId, pos, edges)
         self.vertices = [] # A list of pointers to the vertices in this bag.
-        self.parent = None
+        self.parent, self.a, self.b = None, None, None
 
     def addVertex(self, v):
         """Add a vertex from the original graph to this bag"""
@@ -161,4 +162,7 @@ class Edge():
 
     def isDuplicate(self, edge):
         return (edge.a == self.a and edge.b == self.b) or (edge.a == self.b and edge.b == self.a)
+
+    def __repr__(self):
+        return "({},{})".format(self.a.vid, self.b.vid)
 

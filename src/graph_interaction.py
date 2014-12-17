@@ -1,3 +1,4 @@
+import sys
 from .settings import *
 from .graph import *
 from contextlib import suppress
@@ -29,6 +30,8 @@ class GraphInteraction():
             'p': self.pathify,
             '1': self.toggleDrawText,
             'q': self.tspDP,
+            'Ctrl-s': self.saveAs,
+            'Ctrl-o': self.openFile,
             'Ctrl-c': self.quit
         }
 
@@ -144,18 +147,111 @@ class GraphInteraction():
     #
     # Algorithms
     #
-    def tspDP(self):
+    def tspDP(self): # Possible problem: how to make sure I get paths and not cycles.
         """Compute the smallest tour using DP on a tree decomposition"""
         if not self.isTreeDecomposition or len(self.graph.vertices) < 1:
             return
-        rootid = self.createRoot().vid
-        value = self.tspA(0, 0)
+        root = self.createRoot()
+        value = self.tspB(0, root)
+        print(value)
 
-    def tspA(self, S, i):
-        pass
+    def tspA(self, S, Xi):
+        print("A({}, X{}): {}".format(self.toDegrees(S), Xi.vid, "?"))
+        # The smallest value such that all vertices below Xi have degree 2
+        if Xi.a[S] != None:
+            return Xi.a[S]
+        edges = []
+        for v in Xi.vertices:
+            for e in v.edges:
+                if v.vid < e.other(v).vid:
+                    edges.append(e)
+        edges.sort(key=lambda e: e.cost)
+        # In the case of a leaf bag
+        if len(Xi.edges) == 0 or (len(Xi.edges) == 1 and Xi.parent != None):
+            degrees = self.toDegrees(S)
+            Xi.a[S] = self.tspEdgeSelect(sys.maxsize, 0, edges, degrees.copy())
+            return Xi.a[S]
+        # In the case of a normal bag
+        for s in range(3 ** len(Xi.vertices)):
+            if S > s:
+                continue # Todo: optimization
+            degrees = self.toDegrees(S - s)                                   # Can I select edges twice this way? ?? ??? ????
+            # Xi.a[S] = self.tspB(s, Xi) + self.tspEdgeSelect(sys.maxsize, 0, edges, degrees.copy())
+            # TODO
+            Xi.a[S] = self.tspEdgeSelect(sys.maxsize, 0, edges, degrees.copy())
+            return Xi.a[S]
+        # In case we did not find anything
+        Xi.a[S] = sys.maxsize
+        return Xi.a[S]
 
-    def tspB(self, S, i, j):
-        pass
+    # TODO: use the minimum to abort early??? (is possible for leaf case, but perhaps not for normal bag case
+    def tspEdgeSelect(self, minimum, index, edges, degrees):
+        # Calculate the smallest cost to satisfy the degrees target using only using edges >= the index
+        # Base case 1: the degrees are all zero, so we succeeded as we don't need to add any more edges
+        satisfied = True
+        for d in degrees:
+            if d != 0:
+                satisfied = False
+                break
+        if satisfied:
+            return 0
+        # Base case 2: we have not succeeded yet, but there are no more edges to add, so we failed
+        if index >= len(edges):
+            return sys.maxsize
+        # Base case 3: one of the degrees is < 1, so we added too many vertices, so we failed
+        edge = edges[index]
+        deg = degrees.copy()
+        for i, d in enumerate(deg):
+            if i == edge.a.vid or i == edge.b.vid:
+                if d < 0:
+                    return sys.maxsize; # int.maxvalue
+                # While checking this base case, also compute the new degree list for the first recursion
+                deg[i] -= 1
+        # Take the edge
+        minimum = min(minimum, edge.cost + self.tspEdgeSelect(minimum, index + 1, edges, deg))
+        # Do not take the edge
+        minimum = min(minimum, self.tspEdgeSelect(minimum, index + 1, edges, degrees))
+        return minimum
+
+    def tspB(self, S, Xi):
+        # The smallest value such that all vertices below Xi^Xp have degree 2
+        if Xi.b[S] != None:
+            return Xi.b[S]
+        Xp = Xi.parent
+        if Xp == None:
+            Xp = Bag(-1, Pos(0, 0)) # In the case of the root vertex, cheat a little bit :)
+        # Calculate the B value
+        degrees = self.toDegrees(S)
+        childDegrees = [None] * len(Xi.vertices)
+        j = 0
+        for i, v in enumerate(Xi.vertices):
+            if v in Xp.vertices:
+                try:
+                    childDegrees[i] = degrees[j]
+                    j += 1
+                except IndexError:
+                    childDegrees[i] = 0
+            else:
+                childDegrees[i] = 2
+        Xi.b[S] = self.tspA(self.fromDegrees(childDegrees), Xi)
+        return Xi.b[S]
+
+    def toDegrees(self, S):
+        # From an integer representation to a list of degrees
+        result = []
+        while S != 0:
+            temp = S
+            S //= 3
+            result.append(temp - 3 * S)
+        return result
+
+    def fromDegrees(self, degrees):
+        # From a list of degrees to an integer representation
+        result = 0
+        for d in degrees:
+            result *= 3
+            result += d
+        return result
 
     def createRoot(self, rootBag=None):
         """Make the tree decomposition a true tree, by choosing a root and setting all parent pointers correctly"""
@@ -165,6 +261,9 @@ class GraphInteraction():
         # Define a local function that sets the parent of a bag recursively
         def setParentRecursive(bag, parent):
             bag.parent = parent
+            bag.a, bag.b = [None] * (3 ** len(bag.vertices)), [None]
+            if parent != None:
+                bag.b = [None] * (3 ** len([None for v in bag.vertices if v in parent.vertices]))
             for e in bag.edges:
                 child = e.other(bag)
                 if not parent or bag.parent != child:
@@ -179,6 +278,65 @@ class GraphInteraction():
     def quit(self):
         """Quit"""
         self.mainWin.quit()
+
+    def saveAs(self):
+        """Save the graph to file"""
+        origGraph = self.graph.originalGraph if self.isTreeDecomposition else self.graph
+        s = "NODE_COORD_SECTION"
+        for v in origGraph.vertices:
+            s += "\n{} {} {}".format(v.vid, v.pos.x, v.pos.y)
+        s += "\nEDGE_SECTION"
+        for v in origGraph.vertices:
+            for e in v.edges:
+                if v.vid < e.other(v).vid:
+                    s += "\n{} {} {}".format(e.a.vid, e.b.vid, e.cost)
+        if self.isTreeDecomposition:
+            s += "\nBAG_COORD_SECTION"
+            for b in self.graph.vertices:
+                s += "\n{} {} {}".format(b.vid, b.pos.x, b.pos.y)
+                for v in b.vertices:
+                    s += " " + str(v.vid)
+            s += "\nBAG_EDGE_SECTION"
+            for b in self.graph.vertices:
+                for e in b.edges:
+                    if e.a.vid < e.b.vid:
+                        s += "\n{} {}".format(e.a.vid, e.b.vid)
+        self.mainWin.app.broSave(s)
+
+    def openFile(self):
+        """Open a file"""
+        path = self.mainWin.app.broOpen()
+        if path == "":
+            return
+        with open(path) as f:
+            # Looks like the file opening went right. Good, now first create the new graph.
+            self.graph = TreeDecomposition(Graph())
+            origGraph = self.graph.originalGraph if self.isTreeDecomposition else self.graph
+            comp = lambda line, s: line[0:len(s)] == s
+            state = 0 # 0=nothing, 1=vertices, 2=edges, 3=bags, 4=bag edges
+
+            # And lets now fill the graph with some sensible stuff.
+            for line in f:
+                l = line.split(' ')
+                # Important file parameters
+                if comp(line, "NODE_COORD_SECTION"): state = 1
+                elif comp(line, "EDGE_SECTION"): state = 2
+                elif comp(line, "BAG_COORD_SECTION"): state = 3
+                elif comp(line, "BAG_EDGE_SECTION"): state = 4
+                # Add vertices, edges, bags or bag edges
+                elif state == 1:
+                    origGraph.addVertex(Vertex(int(l[0]), Pos(int(l[1]), int(l[2]))))
+                elif state == 2:
+                    print("line: {}<-->{} {} {}".format(line, int(l[0]), int(l[1]), int(l[2])))
+                    origGraph.addEdge(int(l[0]), int(l[1]), int(l[2]))
+                elif state == 3:
+                    bag = Bag(int(l[0]), Pos(int(l[1]), int(l[2])))
+                    for v in l[3:]:
+                        bag.addVertex(origGraph.vertices[int(v)])
+                    self.graph.addVertex(bag)
+                elif state == 4:
+                    self.graph.addEdge(int(l[0]), int(l[1]), 1)
+        self.redraw()
 
     def keymapToStr(self):
         """Returns a string with all the keys and their explanation (docstring)."""

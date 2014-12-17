@@ -1,5 +1,6 @@
 from tkinter import *
 from tkinter.ttk import *
+from tkinter import filedialog
 from mattycontrols.MattyControls import *
 from .mainwin import MainWin
 from .settings import Settings, Pos, Size
@@ -38,6 +39,19 @@ class Application(Frame):
 
     def quitApp(self):
         self.mainWindow.quit()
+
+    def broSave(self, content):
+        """Save content to file"""
+        f = filedialog.asksaveasfile(mode='w', defaultextension=".txt")
+        if f is None: # asksaveasfile returns `None` if the dialog is closed with 'cancel'.
+            return
+        f.write(content)
+        f.close()
+
+    def broOpen(self):
+        """Open a file"""
+        f = filedialog.askopenfilename()
+        return f
 
     def onMouseDown(self, event):
         self.mainWindow.onMouseDown(Pos(event.x, event.y), event.num)
