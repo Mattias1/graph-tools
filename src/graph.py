@@ -46,7 +46,6 @@ class Graph(GraphBase):
         return GraphBase.addVertex(self, v)
 
     def addEdge(self, vidA, vidB, cost=1):
-        print("DEBUG |v|: {}, vid a: {}, vid b: {}, cost: {}".format(len(self.vertices), vidA, vidB, cost))
         edge = Edge(self.vertices[vidA], self.vertices[vidB], cost)
         result = False
         if edge.a.addEdge(edge):

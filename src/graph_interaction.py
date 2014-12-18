@@ -28,6 +28,7 @@ class GraphInteraction():
             'd': self.removeVertices,
             'c': self.cliqueify,
             'p': self.pathify,
+            't': self.treeify,
             '1': self.toggleDrawText,
             'q': self.tspDP,
             'Ctrl-s': self.saveAs,
@@ -96,7 +97,7 @@ class GraphInteraction():
     def cliqueify(self):
         """Add or remove edges between all selected vertices"""
         if len(self.selectedVertices) < 2:
-            return False
+            return
         result = False
         workGraph = self.graph
         if self.isTreeDecomposition and type(self.selectedVertices[0]) != Bag:
@@ -118,12 +119,12 @@ class GraphInteraction():
     def pathify(self):
         """Creating a path, a tour or removing all edges between consecutive vertices"""
         if len(self.selectedVertices) < 2:
-            return False
+            return
         result = False
         workGraph = self.graph
         sv = self.selectedVertices
         if self.isTreeDecomposition and type(self.selectedVertices[0]) != Bag:
-            workGraph = self.graph.originalGraph 
+            workGraph = self.graph.originalGraph
         # Add path edges
         for i in range(len(sv) - 1):
             if workGraph.addEdge(sv[i].vid, sv[i + 1].vid):
@@ -137,6 +138,26 @@ class GraphInteraction():
                 workGraph.removeEdge(sv[i].vid, sv[i + 1].vid)
             if len(sv) > 2:
                 workGraph.removeEdge(sv[0].vid, sv[-1].vid)
+        self.redraw()
+
+    def treeify(self):
+        """Connect or remove the first vertex to all others"""
+        if len(self.selectedVertices) < 2:
+            return
+        result = False
+        workGraph = self.graph
+        sv = self.selectedVertices
+        if self.isTreeDecomposition and type(self.selectedVertices[0]) != Bag:
+            workGraph = self.graph.originalGraph
+        # Add path edges
+        r = sv[0]
+        for v in sv[1:]:
+            if workGraph.addEdge(r.vid, v.vid):
+                result = True
+        # If no edges were added, remove all edges
+        if not result:
+            for v in sv[1:]:
+                workGraph.removeEdge(r.vid, v.vid)
         self.redraw()
 
     def toggleDrawText(self):
@@ -172,19 +193,18 @@ class GraphInteraction():
             Xi.a[S] = self.tspEdgeSelect(sys.maxsize, 0, edges, degrees.copy())
             return Xi.a[S]
         # In the case of a normal bag
+        minimum = sys.maxsize
         for s in range(3 ** len(Xi.vertices)):
             if S > s:
                 continue # Todo: optimization
             degrees = self.toDegrees(S - s)                                   # Can I select edges twice this way? ?? ??? ????
             # Xi.a[S] = self.tspB(s, Xi) + self.tspEdgeSelect(sys.maxsize, 0, edges, degrees.copy())
             # TODO
-            Xi.a[S] = self.tspEdgeSelect(sys.maxsize, 0, edges, degrees.copy())
-            return Xi.a[S]
-        # In case we did not find anything
-        Xi.a[S] = sys.maxsize
+            minimum = min(minimum, self.tspEdgeSelect(sys.maxsize, 0, edges, degrees.copy()))
+        Xi.a[S] = minimum
         return Xi.a[S]
 
-    # TODO: use the minimum to abort early??? (is possible for leaf case, but perhaps not for normal bag case
+    # Todo: use the minimum to abort early??? (is possible for leaf case, but perhaps not for normal bag case
     def tspEdgeSelect(self, minimum, index, edges, degrees):
         # Calculate the smallest cost to satisfy the degrees target using only using edges >= the index
         # Base case 1: the degrees are all zero, so we succeeded as we don't need to add any more edges
@@ -204,12 +224,11 @@ class GraphInteraction():
         for i, d in enumerate(deg):
             if i == edge.a.vid or i == edge.b.vid:
                 if d < 0:
-                    return sys.maxsize; # int.maxvalue
+                    return sys.maxsize
                 # While checking this base case, also compute the new degree list for the first recursion
                 deg[i] -= 1
-        # Take the edge
-        minimum = min(minimum, edge.cost + self.tspEdgeSelect(minimum, index + 1, edges, deg))
-        # Do not take the edge
+        # Try both to take the edge and not to take the edge
+        minimum = min(minimum, edge.cost + self.tspEdgeSelect(minimum - edge.cost, index + 1, edges, deg))
         minimum = min(minimum, self.tspEdgeSelect(minimum, index + 1, edges, degrees))
         return minimum
 
@@ -327,7 +346,6 @@ class GraphInteraction():
                 elif state == 1:
                     origGraph.addVertex(Vertex(int(l[0]), Pos(int(l[1]), int(l[2]))))
                 elif state == 2:
-                    print("line: {}<-->{} {} {}".format(line, int(l[0]), int(l[1]), int(l[2])))
                     origGraph.addEdge(int(l[0]), int(l[1]), int(l[2]))
                 elif state == 3:
                     bag = Bag(int(l[0]), Pos(int(l[1]), int(l[2])))
