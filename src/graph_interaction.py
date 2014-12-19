@@ -188,21 +188,58 @@ class GraphInteraction():
                     edges.append(e)
         edges.sort(key=lambda e: e.cost)
         # In the case of a leaf bag
+        degrees = self.toDegrees(S)
         if len(Xi.edges) == 0 or (len(Xi.edges) == 1 and Xi.parent != None):
-            degrees = self.toDegrees(S)
             Xi.a[S] = self.tspEdgeSelect(sys.maxsize, 0, edges, degrees.copy())
             return Xi.a[S]
         # In the case of a normal bag
         minimum = sys.maxsize
-        for s in range(3 ** len(Xi.vertices)):
-            if S > s:
-                continue # Todo: optimization
-            degrees = self.toDegrees(S - s)                                   # Can I select edges twice this way? ?? ??? ????
-            # Xi.a[S] = self.tspB(s, Xi) + self.tspEdgeSelect(sys.maxsize, 0, edges, degrees.copy())
-            # TODO
-            minimum = min(minimum, self.tspEdgeSelect(sys.maxsize, 0, edges, degrees.copy()))
+        # for s in range(3 ** len(Xi.vertices)):
+        #     if S > s:
+        #         continue # Todo: optimization + correctness???
+        #     degrees = self.toDegrees(S - s)
+        #     # Xi.a[S] = self.tspB(s, Xi) + self.tspEdgeSelect(sys.maxsize, 0, edges, degrees.copy())
+        #     # TODO
+        #     minimum = min(minimum, self.tspEdgeSelect(sys.maxsize, 0, edges, degrees.copy()))
         Xi.a[S] = minimum
         return Xi.a[S]
+
+    def tspChildSelect(self, Xi, i, j, targetDegrees, childDegrees, usedEdges):
+        # Select all possible mixes of degrees for all vertices and evaluate them
+        #   i = the vertex we currently analyze, j = the child we currently analyze
+        #   targetDegrees goes from full to empty, childDegrees from empty to full
+        # Base case: if we analyzed the degrees of all vertices, return ???
+        if i >= len(Xi.vertices):
+            raise NotImplementedError("todo")
+        # Base case: if we can't or didn't want to 'spend' this degree, move on
+        if targetDegrees[i] == 0 or j >= len(Xi.edges):
+            return self.tspChildSelect(Xi, i + 1, 0, targetDegrees, childDegrees, usedEdges)
+        # Base case: if the current (child) bag does not contain the vertex to analyze, try the next (child) bag
+        if Xi.vertices[i] not in Xi.edges[j].vertices:
+            return self.tspChildSelect(Xi, i, j + 1, targetDegrees, childDegrees, usedEdges)
+
+        # If the current degree is 2, try letting the child manage it
+        if targetDegrees[i] == 2 and childDegrees[j][i] == 0:
+            td, cds = targetDegrees.copy(), childDegrees.copy()
+            td[i] = 0
+            cds[j][i] = 2
+            minimum = self.tspChildSelect(Xi, i + 1, 0, td, cds, usedEdges)
+        # If the current degree is at least 1 (which it is if we get here),
+        #   try to combine it (for all other vertices) in a hamiltonian path
+        for k in range(i + 1, len(Xi.vertices)):
+            # Todo: check if edge (i, k) is allowed (won't make it a cycle)
+            if targetDegrees[k] < 1 or childDegrees[j] > 1:
+                continue
+            td, cds = targetDegrees.copy(), childDegrees.copy()
+            td[i] -= 1
+            cds[j][i] += 1
+            td[k] -= 1
+            cds[j][k] += 1
+            # We may have to try to analyze the same vertex again if it's degree is higher than 1
+            minimum = min(minimum, self.tspChildSelect(Xi, i, j, td, cds, usedEdges))
+        # Also, try not assigning this degree to anyone, we (maybe) can solve it inside Xi
+        minimum = min(minimum, self.tspChildSelect(Xi, i, j + 1, targetDegrees, childDegrees, usedEdges))
+        return minimum
 
     # Todo: use the minimum to abort early??? (is possible for leaf case, but perhaps not for normal bag case
     def tspEdgeSelect(self, minimum, index, edges, degrees):

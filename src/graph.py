@@ -37,9 +37,9 @@ class Graph(GraphBase):
 
     def cost(self, vidA, vidB):
         edge = self.vertices[vidA].getEdgeTo(vidB)
-        if edge:
+        if edge != None:
             return edge.cost
-        return inf
+        return sys.maxsize
 
     def addVertex(self, v):
         assert type(v) is Vertex, "Added vertices to this type of Graph must be of type 'Vertex'"
@@ -67,9 +67,6 @@ class TreeDecomposition(Graph):
     def __init__(self, originalGraph):
         self.originalGraph = originalGraph
         GraphBase.__init__(self)
-
-    def cost(self, vidA, vidB):
-        return 1
 
     def addVertex(self, v):
         if type(v) is Bag: # , "Added vertex must be of type 'Bag'"
