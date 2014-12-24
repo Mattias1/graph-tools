@@ -193,7 +193,7 @@ class GraphInteraction():
             Xi.a[S] = self.tspEdgeSelect(sys.maxsize, 0, edges, degrees.copy())
             return Xi.a[S]
         # In the case of a normal bag
-        Xi.a[S] = self.tspChildSelect(Xi, 0, 0, degrees, [[0] * len(degrees)] * len(Xi.vertices), edges, [])
+        Xi.a[S] = self.tspChildSelect(Xi, 0, 0, degrees, [[0] * len(degrees)] * len(Xi.edges), edges, [])
         return Xi.a[S]
 
     def tspChildSelect(self, Xi, i, j, targetDegrees, childDegrees, validEdges, usedEdges):
@@ -202,18 +202,18 @@ class GraphInteraction():
         #   targetDegrees goes from full to empty, childDegrees from empty to full
 
 
-        # TODO: debug info
+        print('i: {}, targetD len: {}, childD len: {}, childD[0] len: {}, Xi.vs len: {}'.format(i, len(targetDegrees), len(childDegrees), len(childDegrees[0]), len(Xi.vertices)))
 
 
         # Base case: if we analyzed the degrees of all vertices, return ???
         if i >= len(Xi.vertices):
             val = self.tspEdgeSelect(sys.maxsize, 0, validEdges, targetDegrees)
             if 0 <= val < sys.maxsize:
-                for i, cds in enumerate(childDegrees):
-                    if Xi.parent != Xi.edges.other(Xi):
+                for k, cds in enumerate(childDegrees):
+                    if Xi.parent != Xi.edges[k].other(Xi):
                         S = self.fromDegrees(cds)
-                        val += self.tspA(S, Xi.vertices[i])
-                return val
+                        val += self.tspA(S, Xi.edges[k].other(Xi))
+            return val
         # Base case: if we can't or didn't want to 'spend' this degree, move on
         if targetDegrees[i] == 0 or j >= len(Xi.edges):
             return self.tspChildSelect(Xi, i + 1, 0, targetDegrees, childDegrees, validEdges, usedEdges)
@@ -224,6 +224,7 @@ class GraphInteraction():
             return self.tspChildSelect(Xi, i, j + 1, targetDegrees, childDegrees, validEdges, usedEdges)
 
         # If the current degree is 2, try letting the child manage it
+        minimum = sys.maxsize
         if targetDegrees[i] == 2 and childDegrees[j][i] == 0:
             td, cds = targetDegrees.copy(), childDegrees.copy()
             td[i] = 0
@@ -233,7 +234,7 @@ class GraphInteraction():
         #   try to combine it (for all other vertices) in a hamiltonian path
         for k in range(i + 1, len(Xi.vertices)):
             # Todo: check if edge (i, k) is allowed (won't make it a cycle)
-            if targetDegrees[k] < 1 or childDegrees[j] > 1:
+            if targetDegrees[k] < 1 or childDegrees[j][k] > 1:
                 continue
             td, cds = targetDegrees.copy(), childDegrees.copy()
             td[i] -= 1
@@ -365,7 +366,8 @@ class GraphInteraction():
 
     def openFile(self):
         """Open a file"""
-        path = self.mainWin.app.broOpen()
+        # path = self.mainWin.app.broOpen()
+        path = "test-graph-2.txt"
         if path == "":
             return
         with open(path) as f:
