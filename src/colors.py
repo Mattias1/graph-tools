@@ -26,14 +26,3 @@ class Colors():
         c, d = self.toTuple(a), self.toTuple(b)
         return self.toHex([int(c[i] + (d[i] - c[i]) * v) for i in range(3)])
 
-    def fromLabel(self, label):
-        if label == 'string':
-            return '#e6db74'
-        if label == 'number':
-            return '#ae81ff'
-        if label == 'keyword':
-            return '#f92672'
-        if label == 'comment':
-            return '#75715e'
-        return self.text
-
