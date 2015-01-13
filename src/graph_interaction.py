@@ -401,8 +401,7 @@ class GraphInteraction():
 
     def openFile(self):
         """Open a file"""
-        path = "test-graph-2.txt"
-        # path = self.mainWin.app.broOpen()
+        path = self.mainWin.app.broOpen()
         self.openFileWithPath(path)
 
     def openFileWithPath(self, path):

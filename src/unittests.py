@@ -13,7 +13,7 @@ class UnitTests():
     def __init__(self, mainWin):
         """Init runs unit tests"""
         self.graphInteraction = GraphInteraction(mainWin)
-        self.graphInteraction.openFileWithPath("test-graph-2.txt")
+        self.graphInteraction.openFileWithPath("graph-unittests.txt")
         self.errors = []
 
         self.testToFromDegrees()
