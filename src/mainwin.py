@@ -1,6 +1,7 @@
 from .win import *
 from .colors import *
 from .graph_interaction import *
+import src.unittests
 
 
 class MainWin(Win):
@@ -15,6 +16,9 @@ class MainWin(Win):
         self.redrawMarker = False
 
         self.graphInteraction = GraphInteraction(self)
+
+        # DEBUG:
+        src.unittests.UnitTests(self)
 
     @property
     def isTreeDecomposition(self):
