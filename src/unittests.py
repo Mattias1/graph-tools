@@ -67,7 +67,6 @@ class UnitTests():
                 if v.vid < e.other(v).vid:
                     edges.append(e)
         edges.sort(key=lambda e: e.cost)
-        print(edges)
         val = gi.tspEdgeSelect(sys.maxsize, 0, Xi, edges, targetDegrees)
         if val != 2:
             self.error('DP test case 1 - val: {}'.format(val))
