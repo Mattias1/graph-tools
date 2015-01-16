@@ -17,7 +17,6 @@ class MainWin(Win):
 
         self.graphInteraction = GraphInteraction(self)
 
-        # DEBUG:
         src.unittests.UnitTests(self)
 
     @property
@@ -52,9 +51,11 @@ class MainWin(Win):
                     self.drawLine(self.colors.edge, v.pos + ofsA, e.other(v).pos + ofsB)
 
         # Draw the hovered vertex
-        if self.graphInteraction.hoverVertex:
+        isBag = type(self.graphInteraction.hoverVertex) == Bag
+        if self.graphInteraction.hoverVertex and (type(graph) == TreeDecomposition) == isBag:
+            r = self.settings.selectradius + (self.settings.bagextra if isBag else 0)
             ofs = offset if self.graphInteraction.hoverVertex in selectedVs else Pos(0, 0)
-            self.drawDisc(self.colors.hover, self.graphInteraction.hoverVertex.pos + ofs, self.settings.selectradius)
+            self.drawDisc(self.colors.hover, self.graphInteraction.hoverVertex.pos + ofs, r)
 
         # Draw all vertices
         for v in graph.vertices:
@@ -63,7 +64,7 @@ class MainWin(Win):
             c = self.colors.normal if self.settings.drawsmall else self.colors.hover
             c = self.colors.selected if v in selectedVs else c
             r = self.settings.vertexradiussmall if self.settings.drawsmall else self.settings.vertexradiusbig
-            if isBag: r *= self.settings.bagfactor
+            if isBag: r += self.settings.bagextra
             ofs = offset if v in selectedVs else Pos(0, 0)
             self.drawDisc(c, v.pos + ofs, r)
 
@@ -159,7 +160,7 @@ class MainWin(Win):
                 distance = p.distanceTo(v.pos)
                 self.graphInteraction.hoverVertex = v
         if self.graphInteraction.graph.originalGraph:
-            distance = self.settings.selectradius * self.settings.bagfactor
+            distance = self.settings.selectradius + self.settings.bagextra
             for v in self.graphInteraction.graph.originalGraph.vertices:
                 if p.distanceSqTo(v.pos) < distance * distance:
                     distance = p.distanceTo(v.pos)

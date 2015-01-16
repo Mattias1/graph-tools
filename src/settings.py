@@ -16,7 +16,7 @@ class Settings():
         self.vertexradiussmall = 4      #px
         self.vertexradiusbig = 20       #px
         self.selectradius = 30          #px
-        self.bagfactor = 3
+        self.bagextra = 35
         self.scrollbars = 'none'
         self.fps_inv = 1/30             # seconds per frame
         self.colors = colors.Colors()
