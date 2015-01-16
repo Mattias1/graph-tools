@@ -44,15 +44,15 @@ class UnitTests():
                 self.error('To/from degrees - degrees: {}, S: {}, result degrees: {}'.format(degrees, S, result))
 
     def testDPBaseCases(self):
-        # Test some base cases for tspA
-        # def tspA(self, S, Xi): -
+        # Test some base cases for tsp
+        # def tspTable(self, S, Xi): -
         gi = self.graphInteraction
         gi.createRoot()
 
-        # Test case 0 - Invalid leaf case (tspA)
+        # Test case 0 - Invalid leaf case (tspTable)
         S = gi.fromDegrees([2, 1, 2])
         Xi = gi.graph.vertices[1]
-        val = self.graphInteraction.tspA(S, Xi)
+        val = self.graphInteraction.tspTable(S, Xi)
         if val < sys.maxsize:
             self.error('DP test case 0 - val: {}'.format(val))
 
