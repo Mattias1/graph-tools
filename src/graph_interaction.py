@@ -7,7 +7,7 @@ from contextlib import suppress
 class GraphInteraction():
     def __init__(self, mainWin):
         self.initKeymap()
-        self.graph = TreeDecomposition(Graph())
+        self.graph = TreeDecomposition(Graph(True))
         self.hoverVertex = None
         self.hoverEdge = None
         self.selectedVertices = [] # List with vertex ids
@@ -73,7 +73,7 @@ class GraphInteraction():
         workGraph = self.graph.originalGraph if self.isTreeDecomposition else self.graph
         if self.hoverVertex != None or self.hoverEdge != None:
             return False
-        if not workGraph.addVertex(Vertex(len(workGraph.vertices), self.mainWin.mousePos)):
+        if not workGraph.addVertex(Vertex(workGraph, len(workGraph.vertices), self.mainWin.mousePos)):
             return False
         self.hoverVertex = workGraph.vertices[-1]
         self.redraw()
@@ -84,7 +84,7 @@ class GraphInteraction():
             return False
         if self.hoverVertex != None or self.hoverEdge != None:
             return False
-        if not self.graph.addVertex(Bag(len(self.graph.vertices), self.mainWin.mousePos)):
+        if not self.graph.addVertex(Bag(self.graph, len(self.graph.vertices), self.mainWin.mousePos)):
             return False
         self.hoverVertex = self.graph.vertices[-1]
         self.redraw()
@@ -182,7 +182,7 @@ class GraphInteraction():
         #         if v != None:
         #             print(' {}: {}'.format(self.toDegrees(i, 3), v))
         tour = self.tspReconstruct(S, Xroot)
-        print('Tour: {}'.format(tour))
+        print('Tour: {}\n'.format(tour))
 
     def tspTable(self, S, Xi):
         # The smallest value such that all vertices below Xi have degree 2 and vertices in Xi have degrees defined by S
@@ -416,7 +416,10 @@ class GraphInteraction():
     def saveAs(self):
         """Save the graph to file"""
         origGraph = self.graph.originalGraph if self.isTreeDecomposition else self.graph
-        s = "NODE_COORD_SECTION"
+        s = "EDGE_WEIGHT_TYPE : EUC_2D"
+        if origGraph.isEuclidean:
+            s += ""
+        s += "NODE_COORD_SECTION"
         for v in origGraph.vertices:
             s += "\n{} {} {}".format(v.vid, v.pos.x, v.pos.y)
         s += "\nEDGE_SECTION"
@@ -439,8 +442,8 @@ class GraphInteraction():
 
     def openFile(self):
         """Open a file"""
-        # path = self.mainWin.app.broOpen()
-        path = "test-graph-2.txt"
+        path = self.mainWin.app.broOpen()
+        # path = "test-graph-3.txt"
         # path = "graph-unittests.txt"
         self.openFileWithPath(path)
 
@@ -458,17 +461,20 @@ class GraphInteraction():
             for line in f:
                 l = line.split(' ')
                 # Important file parameters
-                if comp(line, "NODE_COORD_SECTION"): state = 1
+                if comp(line, "EDGE_WEIGHT_TYPE : EUC_2D"):
+                     origGraph.isEuclidean = True
+                # Vertices and edges
+                elif comp(line, "NODE_COORD_SECTION"): state = 1
                 elif comp(line, "EDGE_SECTION"): state = 2
                 elif comp(line, "BAG_COORD_SECTION"): state = 3
                 elif comp(line, "BAG_EDGE_SECTION"): state = 4
                 # Add vertices, edges, bags or bag edges
                 elif state == 1:
-                    origGraph.addVertex(Vertex(int(l[0]), Pos(int(l[1]), int(l[2]))))
+                    origGraph.addVertex(Vertex(origGraph, int(l[0]), Pos(int(l[1]), int(l[2]))))
                 elif state == 2:
                     origGraph.addEdge(int(l[0]), int(l[1]), int(l[2]))
                 elif state == 3:
-                    bag = Bag(int(l[0]), Pos(int(l[1]), int(l[2])))
+                    bag = Bag(self.graph, int(l[0]), Pos(int(l[1]), int(l[2])))
                     for v in l[3:]:
                         bag.addVertex(origGraph.vertices[int(v)])
                     self.graph.addVertex(bag)

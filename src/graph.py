@@ -9,8 +9,10 @@ from .settings import *
 #
 class GraphBase():
     """An abstract graph base class"""
-    def __init__(self):
+    def __init__(self, euclidean=False):
         self.vertices = []
+        self.isEuclidean = euclidean
+        self.name = ""
         pass
 
     def cost(self, vidA, vidB):
@@ -32,8 +34,8 @@ class GraphBase():
 
 class Graph(GraphBase):
     """A graph type where the vertices store their edges"""
-    def __init__(self):
-        GraphBase.__init__(self)
+    def __init__(self, euclidean=False):
+        GraphBase.__init__(self, euclidean)
 
     def cost(self, vidA, vidB):
         edge = self.vertices[vidA].getEdgeTo(vidB)
@@ -45,7 +47,7 @@ class Graph(GraphBase):
         assert type(v) is Vertex, "Added vertices to this type of Graph must be of type 'Vertex'"
         return GraphBase.addVertex(self, v)
 
-    def addEdge(self, vidA, vidB, cost=1):
+    def addEdge(self, vidA, vidB, cost=None):
         edge = Edge(self.vertices[vidA], self.vertices[vidB], cost)
         result = False
         if edge.a.addEdge(edge):
@@ -83,17 +85,32 @@ class TreeDecomposition(Graph):
 #
 class VertexBase():
     """A vertex that doesn't store its edges"""
-    def __init__(self, vertexId, pos):
+    def __init__(self, graph, vertexId, pos):
+        self.graph = graph
         self.vid = vertexId
-        self.pos = pos
+        self._pos = pos
         self.name = ""
+
+    @property
+    def pos(self):
+        return self._pos
+    @pos.setter
+    def pos(self, value):
+        self._pos = value
 
 
 class Vertex(VertexBase):
     """A vertex that stores its edges itself"""
-    def __init__(self, vertexId, pos, edges=None):
-        VertexBase.__init__(self, vertexId, pos)
+    def __init__(self, graph, vertexId, pos, edges=None):
+        VertexBase.__init__(self, graph, vertexId, pos)
         self.edges = [] if edges == None else edges
+
+    @VertexBase.pos.setter
+    def pos(self, value):
+        self._pos = value
+        if self.graph.isEuclidean:
+            for e in self.edges:
+                e.euclideanCost()
 
     def addEdge(self, edge):
         """Add an edge if it's not already in the edge list"""
@@ -143,11 +160,19 @@ class Bag(Vertex):
 # Edges
 #
 class Edge():
-    def __init__(self, a, b, cost):
+    def __init__(self, a, b, cost=None):
         self.a = a
         self.b = b
-        self.cost = cost
+        if cost == None:
+            self.euclideanCost()
+        else:
+            self.cost = cost
         assert a != b
+
+    def euclideanCost(self):
+        x = self.a.pos.x - self.b.pos.x
+        y = self.a.pos.y - self.b.pos.y
+        self.cost = ((x*x + y*y) ** 0.5) // 10 # The euclidean distance in deci-px.
 
     def other(self, vertex):
         if vertex == self.a:
