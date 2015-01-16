@@ -1,3 +1,4 @@
+import os
 from tkinter import *
 from tkinter.ttk import *
 from tkinter import filedialog
@@ -10,9 +11,9 @@ class Application(Frame):
     def __init__(self, settings, master):
         """The tkinter frame that manages the canvas and the keyboard and mouse interaction"""
         frame_init(self, master)
-        master.title("graphs")
+        self.setTitle()
 
-        self.ctrl, self.shift, self.alt, self.superkey = False, False, False, False
+        self.resetModifyKeys()
 
         self.canvas = Cnvs(master, bd=-2)
         # self.master.wm_protocol("WM_DELETE_WINDOW", self.quitApp)
@@ -40,20 +41,32 @@ class Application(Frame):
 
         self.master.after(int(self.settings.fps_inv * 1000), self.loop)
 
+    def setTitle(self, name=None):
+        if not name:
+            self.master.title("graphs")
+        else:
+            self.master.title("graphs - {}".format(name))
+
     def quitApp(self):
         self.mainWindow.quit()
 
-    def broSave(self, content):
+    def broSave(self, content, name=False):
         """Save content to file"""
         f = filedialog.asksaveasfile(mode='w', defaultextension=".txt")
+        if name:
+            filename = os.path.splitext(os.path.basename(f.name))[0]
+            content = "NAME : {}\n{}".format(filename, content)
+            self.setTitle(filename)
         if f is None: # asksaveasfile returns `None` if the dialog is closed with 'cancel'.
             return
         f.write(content)
         f.close()
+        self.resetModifyKeys()
 
     def broOpen(self):
         """Open a file"""
         f = filedialog.askopenfilename()
+        self.resetModifyKeys()
         return f
 
     def onMouseDown(self, event):
@@ -99,10 +112,14 @@ class Application(Frame):
             return True
         return False
 
+    def resetModifyKeys(self):
+        # Reset the modify keys
+        self.ctrl, self.shift, self.alt, self.superkey = False, False, False, False
+
     def onResizeMoveFocus(self, event):
         # On focus
-        self.ctrl, self.shift, self.alt, self.superkey = False, False, False, False
-        
+        self.resetModifyKeys()
+
         # On resize
         s = Size(event.width, event.height)
         if s != self.settings.size:

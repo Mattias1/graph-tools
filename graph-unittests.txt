@@ -1,3 +1,4 @@
+NAME : graph-unittests
 NODE_COORD_SECTION
 0 698 202
 1 818 107

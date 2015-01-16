@@ -416,29 +416,30 @@ class GraphInteraction():
     def saveAs(self):
         """Save the graph to file"""
         origGraph = self.graph.originalGraph if self.isTreeDecomposition else self.graph
-        s = "EDGE_WEIGHT_TYPE : EUC_2D"
+        s = ""
         if origGraph.isEuclidean:
-            s += ""
-        s += "NODE_COORD_SECTION"
+            s += "EDGE_WEIGHT_TYPE : EUC_2D\n"
+        s += "NODE_COORD_SECTION\n"
         for v in origGraph.vertices:
-            s += "\n{} {} {}".format(v.vid, v.pos.x, v.pos.y)
-        s += "\nEDGE_SECTION"
+            s += "{} {} {}\n".format(v.vid, v.pos.x, v.pos.y)
+        s += "EDGE_SECTION\n"
         for v in origGraph.vertices:
             for e in v.edges:
                 if v.vid < e.other(v).vid:
-                    s += "\n{} {} {}".format(e.a.vid, e.b.vid, e.cost)
+                    s += "{} {} {}\n".format(e.a.vid, e.b.vid, e.cost)
         if self.isTreeDecomposition:
-            s += "\nBAG_COORD_SECTION"
+            s += "BAG_COORD_SECTION\n"
             for b in self.graph.vertices:
-                s += "\n{} {} {}".format(b.vid, b.pos.x, b.pos.y)
+                s += "{} {} {}".format(b.vid, b.pos.x, b.pos.y)
                 for v in b.vertices:
                     s += " " + str(v.vid)
-            s += "\nBAG_EDGE_SECTION"
+                s += "\n"
+            s += "BAG_EDGE_SECTION\n"
             for b in self.graph.vertices:
                 for e in b.edges:
                     if e.a.vid < e.b.vid:
-                        s += "\n{} {}".format(e.a.vid, e.b.vid)
-        self.mainWin.app.broSave(s)
+                        s += "{} {}\n".format(e.a.vid, e.b.vid)
+        self.mainWin.app.broSave(s, True)
 
     def openFile(self):
         """Open a file"""
@@ -454,14 +455,19 @@ class GraphInteraction():
             # Looks like the file opening went right. Good, now first create the new graph.
             self.graph = TreeDecomposition(Graph())
             origGraph = self.graph.originalGraph if self.isTreeDecomposition else self.graph
+            self.mainWin.app.setTitle()
             comp = lambda line, s: line[0:len(s)] == s
             state = 0 # 0=nothing, 1=vertices, 2=edges, 3=bags, 4=bag edges
 
             # And lets now fill the graph with some sensible stuff.
             for line in f:
-                l = line.split(' ')
+                l = line.strip().split(' ')
                 # Important file parameters
-                if comp(line, "EDGE_WEIGHT_TYPE : EUC_2D"):
+                if comp(line, "NAME : "):
+                    self.graph.name = l[2]
+                    origGraph.name = l[2]
+                    self.mainWin.app.setTitle(l[2])
+                elif comp(line, "EDGE_WEIGHT_TYPE : EUC_2D"):
                      origGraph.isEuclidean = True
                 # Vertices and edges
                 elif comp(line, "NODE_COORD_SECTION"): state = 1

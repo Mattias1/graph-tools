@@ -172,7 +172,7 @@ class Edge():
     def euclideanCost(self):
         x = self.a.pos.x - self.b.pos.x
         y = self.a.pos.y - self.b.pos.y
-        self.cost = ((x*x + y*y) ** 0.5) // 10 # The euclidean distance in deci-px.
+        self.cost = int(((x*x + y*y) ** 0.5) // 10) # The euclidean distance in deci-px.
 
     def other(self, vertex):
         if vertex == self.a:
