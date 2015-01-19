@@ -1,4 +1,5 @@
 import sys
+import json
 from .settings import *
 from .graph import *
 from contextlib import suppress
@@ -117,7 +118,7 @@ class GraphInteraction():
         self.redraw()
 
     def pathify(self):
-        """Creating a path, a tour or removing all edges between consecutive vertices"""
+        """Create a path, a tour or remove all edges between consecutive vertices"""
         if len(self.selectedVertices) < 2:
             return
         result = False
@@ -173,23 +174,22 @@ class GraphInteraction():
         if not self.isTreeDecomposition or len(self.graph.vertices) < 1:
             return
         Xroot = self.createRoot()
-        S = self.fromDegrees([2] * len(Xroot.vertices))
+        S = self.fromDegreesEndpoints([2] * len(Xroot.vertices), [])
         value = self.tspTable(S, Xroot)
         print("TSP cost: {}".format(value))
-        # for nr, table in enumerate([self.graph.vertices[j].a for j in range(2)]):
-        #     print('X{}'.format(nr))
-        #     for i, v in enumerate(table):
-        #         if v != None:
-        #             print(' {}: {}'.format(self.toDegrees(i, 3), v))
-        tour = self.tspReconstruct(S, Xroot)
+        for nr, table in enumerate([bag.a for bag in self.graph.vertices]):
+            print('X{}'.format(nr))
+            for key, val in table.items():
+                print('  {}: {}'.format(key, val))
+        tour = set(self.tspReconstruct(S, Xroot))
         print('Tour: {}\n'.format(tour))
 
     def tspTable(self, S, Xi):
         # The smallest value such that all vertices below Xi have degree 2 and vertices in Xi have degrees defined by S
         debug = False
         if debug: print('=============================')
-        if debug: print("A({}, X{}): {}".format(self.toDegrees(S, len(Xi.vertices)), Xi.vid, "?"))
-        if Xi.a[S] != None:
+        if debug: print("A({} {}, X{}): {}".format(self.toDegrees(S), self.toEndpoints(S), Xi.vid, "?"))
+        if S in Xi.a:
             if debug: print('lookup return: {}'.format(Xi.a[S]))
             if debug: print('-----------------------------')
             return Xi.a[S]
@@ -202,20 +202,23 @@ class GraphInteraction():
                 if v.vid < e.other(v).vid:
                     edges.append(e)
         edges.sort(key=lambda e: e.cost)
-        degrees = self.toDegrees(S, len(Xi.vertices))
+        degrees = self.toDegrees(S)
+        endpoints = self.toEndpoints(S)
+        childEndpoints = [[] for _ in Xi.edges]
         childDegrees = [[0] * len(degrees) for _ in Xi.edges]
-        Xi.a[S] = self.tspRecurse(Xi, 0, 0, degrees, childDegrees, edges, [], self.tspChildEvaluation, min, sys.maxsize)
+        Xi.a[S] = self.tspRecurse(Xi, edges, 0, 0, degrees, childDegrees, endpoints, childEndpoints,
+                                    self.tspChildEvaluation, min, sys.maxsize)
         if debug: print('calculation return: {}'.format(Xi.a[S]))
         if debug: print('-----------------------------')
         return Xi.a[S]
 
-    def tspChildEvaluation(self, Xi, targetDegrees, childDegrees, validEdges, usedEdges, resultingEdgeList = None):
+    def tspChildEvaluation(self, Xi, edges, targetDegrees, childDegrees, endpoints, childEndpoints, resultingEdgeList = None):
         # This method is the base case for the calculate tsp recurse method.
         # If we analyzed the degrees of all vertices (i.e. we have a complete combination),
         #   return the sum of B values of all children.
         debug = False
         # Base cost: the edges needed inside this Xi to account for the (target) degrees we didn't pass on to our children.
-        val = self.tspEdgeSelect(sys.maxsize, 0, Xi, validEdges, targetDegrees, resultingEdgeList)
+        val = self.tspEdgeSelect(sys.maxsize, 0, Xi, edges, targetDegrees, endpoints, resultingEdgeList)
         if 0 <= val < sys.maxsize:
             if debug: print('{}Local edge selection cost: {}'.format('  ' * i, val))
             for k, cds in enumerate(childDegrees):
@@ -227,7 +230,7 @@ class GraphInteraction():
                         for q, w in enumerate(Xi.vertices):
                             if v == w:
                                 kidDegrees[p] = cds[q]
-                    S = self.fromDegrees(kidDegrees)
+                    S = self.fromDegreesEndpoints(kidDegrees, childEndpoints[k])
                     if debug: print('{}temp A: {}, cds: {}, kidDegrees: {}'.format('  ' * i, S, cds, kidDegrees))
                     # Add to that base cost the cost of hamiltonian paths nescessary to satisfy the degrees.
                     val += self.tspTable(S, Xkid)
@@ -246,23 +249,27 @@ class GraphInteraction():
                 if v.vid < e.other(v).vid:
                     edges.append(e)
         edges.sort(key=lambda e: e.cost)
-        degrees = self.toDegrees(S, len(Xi.vertices))
+        degrees = self.toDegrees(S)
+        endpoints = self.toEndpoints(S)
+        childEndpoints = [[] for _ in Xi.edges]
         childDegrees = [[0] * len(degrees) for _ in Xi.edges]
         mergeF = lambda a, b: a + b
-        return self.tspRecurse(Xi, 0, 0, degrees, childDegrees, edges, [], self.tspLookback, mergeF, [])
+        return self.tspRecurse(Xi, edges, 0, 0, degrees, childDegrees, endpoints, childEndpoints, self.tspLookback, mergeF, [])
 
-    def tspLookback(self, Xi, targetDegrees, childDegrees, validEdges, usedEdges):
+    def tspLookback(self, Xi, edges, targetDegrees, childDegrees, endpoints, childEndpoints):
         # This method is the base case for the reconstruct tsp recurse method.
+        debug = False
         resultingEdgeList = [] # This list will be filled with the edges used in Xi
         totalDegrees = targetDegrees.copy()
         for cds in childDegrees:
             for i, d in enumerate(cds):
                 totalDegrees[i] += d
-        val = Xi.a[self.fromDegrees(totalDegrees)]
+        val = Xi.a[self.fromDegreesEndpoints(totalDegrees, endpoints)]
         if val == None:
             return []
-        if val != self.tspChildEvaluation(Xi, targetDegrees, childDegrees, validEdges, usedEdges, resultingEdgeList):
-            return []
+        if val != self.tspChildEvaluation(Xi, edges, targetDegrees, childDegrees, endpoints, childEndpoints, resultingEdgeList):
+            return [] # Side effect above intended to fill the edge list
+        if debug: print('X{} edgelist 1: {}'.format(Xi.vid, resultingEdgeList))
         # So these are indeed the child degrees that we are looking for
         for k, cds in enumerate(childDegrees):
             Xkid = Xi.edges[k].other(Xi)
@@ -273,27 +280,31 @@ class GraphInteraction():
                     for q, w in enumerate(Xi.vertices):
                         if v == w:
                             kidDegrees[p] = cds[q]
-                S = self.fromDegrees(kidDegrees)
+                S = self.fromDegreesEndpoints(kidDegrees, childEndpoints[k])
                 # We already got the resultingEdgeList for Xi, now add the REL for all the children
                 resultingEdgeList += self.tspReconstruct(S, Xkid)
+                # print('test 2 edgelist: {}'.format(resultingEdgeList))
+        if debug: print('X{} edgelist 3: {}'.format(Xi.vid, resultingEdgeList))
         return resultingEdgeList
 
-    def tspRecurse(self, Xi, i, j, targetDegrees, childDegrees, validEdges, usedEdges, baseF, mergeF, defaultVal):
+    def tspRecurse(self, Xi, edges, i, j, targetDegrees, childDegrees, endpoints, childEndpoints, baseF, mergeF, defaultVal):
         # Select all possible mixes of degrees for all vertices and evaluate them
         #   i = the vertex we currently analyze, j = the child we currently analyze
-        #   targetDegrees goes from full to empty, childDegrees from empty to full
+        #   targetDegrees goes from full to empty, childDegrees from empty to full, endpoints are the endpoints for each child path
         debug = False
         if debug: print('{}{}{}     (X{}: {}, {})   {}'.format('  ' * i, childDegrees, '  ' * (len(Xi.vertices) + 10 - i), Xi.vid, i, j, targetDegrees))
         # Final base case.
         if i >= len(Xi.vertices):
-            return baseF(Xi, targetDegrees, childDegrees, validEdges, usedEdges)
+            return baseF(Xi, edges, targetDegrees, childDegrees, endpoints, childEndpoints)
         # Base case: if we can't or didn't want to 'spend' this degree, move on
         if targetDegrees[i] == 0 or j >= len(Xi.edges):
-            return self.tspRecurse(Xi, i + 1, 0, targetDegrees, childDegrees, validEdges, usedEdges, baseF, mergeF, defaultVal)
+            return self.tspRecurse(Xi, edges, i + 1, 0, targetDegrees, childDegrees, endpoints, childEndpoints,
+                                    baseF, mergeF, defaultVal)
         Xj = Xi.edges[j].other(Xi)
         # Base case: if the current bag (must be child) does not contain the vertex to analyze, try the next (child) bag
         if Xi.parent == Xi.edges[j].other(Xi) or Xi.vertices[i] not in Xj.vertices:
-            return self.tspRecurse(Xi, i, j + 1, targetDegrees, childDegrees, validEdges, usedEdges, baseF, mergeF, defaultVal)
+            return self.tspRecurse(Xi, edges, i, j + 1, targetDegrees, childDegrees, endpoints, childEndpoints,
+                                    baseF, mergeF, defaultVal)
 
         # If the current degree is 2, try letting the child manage it
         result = defaultVal
@@ -301,26 +312,28 @@ class GraphInteraction():
             td, cds = targetDegrees.copy(), [d.copy() for d in childDegrees]
             td[i] = 0
             cds[j][i] = 2
-            result = self.tspRecurse(Xi, i + 1, 0, td, cds, validEdges, usedEdges, baseF, mergeF, defaultVal)
+            result = self.tspRecurse(Xi, edges, i + 1, 0, td, cds, endpoints, childEndpoints, baseF, mergeF, defaultVal)
         # If the current degree is at least 1 (which it is if we get here),
         #   try to combine it (for all other vertices) in a hamiltonian path
         for k in range(i + 1, len(Xi.vertices)):
             # Todo: check if edge (i, k) is allowed (won't make it a cycle)
             if targetDegrees[k] < 1 or childDegrees[j][k] > 1 or Xi.vertices[k] not in Xj.vertices:
                 continue
-            td, cds = targetDegrees.copy(), [d.copy() for d in childDegrees]
+            td, cds, eps = targetDegrees.copy(), [d.copy() for d in childDegrees], [ep.copy() for ep in childEndpoints]
             td[i] -= 1
             cds[j][i] += 1
             td[k] -= 1
             cds[j][k] += 1
+            eps[j].extend([i, k])
             # We may have to try to analyze the same vertex again if it's degree is higher than 1
-            result = mergeF(result, self.tspRecurse(Xi, i, j, td, cds, validEdges, usedEdges, baseF, mergeF, defaultVal))
+            result = mergeF(result, self.tspRecurse(Xi, edges, i, j, td, cds, endpoints, eps, baseF, mergeF, defaultVal))
         # Also, try not assigning this degree to anyone, we (maybe) can solve it inside Xi
-        result = mergeF(result, self.tspRecurse(Xi, i, j + 1, targetDegrees, childDegrees, validEdges, usedEdges, baseF, mergeF, defaultVal))
+        result = mergeF(result, self.tspRecurse(Xi, edges, i, j + 1, targetDegrees, childDegrees,
+                                                        endpoints, childEndpoints, baseF, mergeF, defaultVal))
         return result
 
     # Todo: use the minimum to abort early??? (is possible for leaf case, but perhaps not for normal bag case
-    def tspEdgeSelect(self, minimum, index, Xi, edges, degrees, resultEdgeList = None):
+    def tspEdgeSelect(self, minimum, index, Xi, edges, degrees, endpoints, resultEdgeList = None):
         debug = False
         # Calculate the smallest cost to satisfy the degrees target using only using edges >= the index
         # Base case 1: the degrees are all zero, so we succeeded as we don't need to add any more edges
@@ -353,8 +366,8 @@ class GraphInteraction():
         # Try both to take the edge and not to take the edge
         if debug: print('Edge select ({}), degrees: {}'.format(index, degrees))
         tempREL1, tempREL2 = [edge], []
-        minimum = min(minimum, edge.cost + self.tspEdgeSelect(minimum - edge.cost, index + 1, Xi, edges, deg, tempREL1))
-        val = self.tspEdgeSelect(minimum, index + 1, Xi, edges, degrees, tempREL2)
+        minimum = min(minimum, edge.cost + self.tspEdgeSelect(minimum - edge.cost, index + 1, Xi, edges, deg, endpoints, tempREL1))
+        val = self.tspEdgeSelect(minimum, index + 1, Xi, edges, degrees, endpoints, tempREL2)
         if val < minimum:
             minimum = val
             # So without edge is better - Append the second edge list
@@ -368,24 +381,17 @@ class GraphInteraction():
         if debug: print('Edge select ({}): min value: {}, edges: {}'.format(index, minimum, resultEdgeList))
         return minimum
 
-    def toDegrees(self, S, length=1):
-        # From an integer representation to a list of degrees
-        result = []
-        while S != 0:
-            temp = S
-            S //= 3
-            result.insert(0, temp - 3 * S)
-        for _ in range(len(result), length):
-            result.insert(0, 0)
-        return result
+    def toDegrees(self, S):
+        # From a string representation to a list of degrees
+        return json.loads(S.split('|')[0])
 
-    def fromDegrees(self, degrees):
-        # From a list of degrees to an integer representation
-        result = 0
-        for d in degrees:
-            result *= 3
-            result += d
-        return result
+    def toEndpoints(self, S):
+        # From a string representation to a list of edges
+        return json.loads(S.split('|')[1])
+
+    def fromDegreesEndpoints(self, degrees, endpoints):
+        # From a list of degrees and endpoints to a string representation
+        return json.dumps(degrees) + '|' + json.dumps(endpoints)
 
     def createRoot(self, rootBag=None):
         """Make the tree decomposition a true tree, by choosing a root and setting all parent pointers correctly"""
@@ -395,9 +401,7 @@ class GraphInteraction():
         # Define a local function that sets the parent of a bag recursively
         def setParentRecursive(bag, parent):
             bag.parent = parent
-            bag.a, bag.b = [None] * (3 ** len(bag.vertices)), [None]
-            if parent != None:
-                bag.b = [None] * (3 ** len([None for v in bag.vertices if v in parent.vertices]))
+            bag.a = {}
             for e in bag.edges:
                 child = e.other(bag)
                 if not parent or bag.parent != child:
@@ -443,8 +447,8 @@ class GraphInteraction():
 
     def openFile(self):
         """Open a file"""
-        path = self.mainWin.app.broOpen()
-        # path = "test-graph-3.txt"
+        # path = self.mainWin.app.broOpen()
+        path = "test-graph-2.txt"
         # path = "graph-unittests.txt"
         self.openFileWithPath(path)
 
@@ -491,7 +495,7 @@ class GraphInteraction():
     def keymapToStr(self):
         """Returns a string with all the keys and their explanation (docstring)."""
         result = ""
-        for key, command in self.keymap.items():
+        for key, command in sorted(self.keymap.items()):
             result += key + ": " + command.__doc__ + "\n"
         return result
 

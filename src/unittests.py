@@ -33,13 +33,13 @@ class UnitTests():
     # Actual unit tests
     #
     def testToFromDegrees(self):
-        # Test if the toDegrees and fromDegrees functions work properly
+        # Test if the toDegrees and fromDegreesEndpoints functions work properly
         tries = 99
         for i in range(tries):
             length = randrange(2, 20)
             degrees = [randrange(0, 3) for _ in range(length)]
-            S = self.graphInteraction.fromDegrees(degrees)
-            result = self.graphInteraction.toDegrees(S, length)
+            S = self.graphInteraction.fromDegreesEndpoints(degrees, [])
+            result = self.graphInteraction.toDegrees(S)
             if result != degrees:
                 self.error('To/from degrees - degrees: {}, S: {}, result degrees: {}'.format(degrees, S, result))
 
@@ -50,7 +50,7 @@ class UnitTests():
         gi.createRoot()
 
         # Test case 0 - Invalid leaf case (tspTable)
-        S = gi.fromDegrees([2, 1, 2])
+        S = gi.fromDegreesEndpoints([2, 1, 2], [])
         Xi = gi.graph.vertices[1]
         val = self.graphInteraction.tspTable(S, Xi)
         if val < sys.maxsize:
@@ -67,7 +67,7 @@ class UnitTests():
                 if v.vid < e.other(v).vid:
                     edges.append(e)
         edges.sort(key=lambda e: e.cost)
-        val = gi.tspEdgeSelect(sys.maxsize, 0, Xi, edges, targetDegrees)
+        val = gi.tspEdgeSelect(sys.maxsize, 0, Xi, edges, targetDegrees, [])
         if val != 2:
             self.error('DP test case 1 - val: {}'.format(val))
 

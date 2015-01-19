@@ -185,5 +185,6 @@ class Edge():
         return (edge.a == self.a and edge.b == self.b) or (edge.a == self.b and edge.b == self.a)
 
     def __repr__(self):
+        return "{}-{}".format(self.a.vid, self.b.vid)
         return "({},{})".format(self.a.vid, self.b.vid)
 
