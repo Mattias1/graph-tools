@@ -48,7 +48,10 @@ class MainWin(Win):
                 if v.vid < e.other(v).vid:
                     ofsA = offset if v in selectedVs else Pos(0, 0)
                     ofsB = offset if e.other(v) in selectedVs else Pos(0, 0)
-                    self.drawLine(self.colors.edge, v.pos + ofsA, e.other(v).pos + ofsB)
+                    pa, pb = v.pos + ofsA, e.other(v).pos + ofsB
+                    self.drawLine(self.colors.edge, pa, pb)
+                    anchor = "nw" if (pa.x < pb.x) != (pa.y < pb.y) else "ne"
+                    self.drawString(str(e.cost), self.colors.hover, 0.5 * (pa + pb) + (0, 2), anchor)
 
         # Draw the hovered vertex
         isBag = type(self.graphInteraction.hoverVertex) == Bag
