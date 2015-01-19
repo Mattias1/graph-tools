@@ -181,8 +181,10 @@ class GraphInteraction():
             print('X{}'.format(nr))
             for key, val in table.items():
                 print('  {}: {}'.format(key, val))
-        tour = set(self.tspReconstruct(S, Xroot))
-        print('Tour: {}\n'.format(tour))
+        if value < sys.maxsize:
+            tour = list(set(self.tspReconstruct(S, Xroot)))
+            # self.sortTour(tour, [])
+            print('Tour: {}\n'.format(tour))
 
     def tspTable(self, S, Xi):
         # The smallest value such that all vertices below Xi have degree 2 and vertices in Xi have degrees defined by S
@@ -325,6 +327,7 @@ class GraphInteraction():
             td[k] -= 1
             cds[j][k] += 1
             eps[j].extend([i, k])
+            # Possible TODO: Check if we don't use the same edge twice (we might check this inside tspEdgeSelect already though).
             # We may have to try to analyze the same vertex again if it's degree is higher than 1
             result = mergeF(result, self.tspRecurse(Xi, edges, i, j, td, cds, endpoints, eps, baseF, mergeF, defaultVal))
         # Also, try not assigning this degree to anyone, we (maybe) can solve it inside Xi
@@ -343,8 +346,11 @@ class GraphInteraction():
                 satisfied = False
                 break
         if satisfied:
-            if debug: print('Edge select ({}): no need to add edges, min value: 0'.format(index))
-            return 0
+            if self.sortTour(resultEdgeList, endpoints):
+                if debug: print('Edge select ({}): no need to add edges, min value: 0'.format(index))
+                return 0
+            if debug: print('Edge select ({}): hamiltonian path error'.format(index))
+            return sys.maxsize
         # Base case 2: we have not succeeded yet, but there are no more edges to add, so we failed
         if index >= len(edges):
             if debug: print('Edge select ({}): no more edges to add'.format(index))
@@ -365,7 +371,8 @@ class GraphInteraction():
         assert assertCounter in {0, 2}
         # Try both to take the edge and not to take the edge
         if debug: print('Edge select ({}), degrees: {}'.format(index, degrees))
-        tempREL1, tempREL2 = [edge], []
+        tempREL = [] if resultEdgeList == None else resultEdgeList.copy()
+        tempREL1, tempREL2 = tempREL + [edge], tempREL.copy()
         minimum = min(minimum, edge.cost + self.tspEdgeSelect(minimum - edge.cost, index + 1, Xi, edges, deg, endpoints, tempREL1))
         val = self.tspEdgeSelect(minimum, index + 1, Xi, edges, degrees, endpoints, tempREL2)
         if val < minimum:
@@ -409,6 +416,44 @@ class GraphInteraction():
         # Set the parent for all bags
         setParentRecursive(rootBag, None)
         return rootBag
+
+    def sortTour(self, edgeList, endpoints, sortFinalTour = False):
+        # Sort the edges in the tour by endpoints pair (i = edgeList index, j = endpoints index)
+        # Special case: sort the final tour
+        i, j = 0, 0
+        if endpoints == []:
+            if sortFinalTour:
+                endpoints = [edgeList[0].a, edgeList[0].b]
+                i = 1
+            elif edgeList == None or edgeList == []:
+                return True
+            else:
+                print('initial false: {} {} {}'.format(edgeList, endpoints, sortFinalTour))
+                return False
+        v = endpoints[1]
+        # Find the next edge in the tour and put it at the front of the list (the not processed part)
+        for i in range(i, len(edgeList)):
+            for k in range(i, len(edgeList)):
+                if v in edgeList[k]:
+                    v = edgeList[k].other(v)
+                    edgeList[i], edgeList[k] = edgeList[k], edgeList[i]
+                    break
+                # If there are no edges left, but we are not at the right end point, than we are creating the wrong path
+                # (it might be closed later, so we have an early cycle).
+                if k == len(edgeList) - 1:
+                    print('ERROR: invalid tour - hamiltonian path error: {} {}'.format(edgeList, endpoints))
+                    return False
+            # Check if we completed the hamiltonian path
+            if endpoints[j] == v:
+                j += 2
+                # And chack if we completed the entire tour
+                if j >= len(endpoints):
+                    if i < len(edgeList) - 1:
+                        print('ERROR: invalid tour (graph_interaction - sortTour)')
+                        return False
+                    return True
+                v = endpoints[j + 1]
+        return True
 
     #
     # Misc

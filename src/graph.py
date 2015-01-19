@@ -188,3 +188,6 @@ class Edge():
         return "{}-{}".format(self.a.vid, self.b.vid)
         return "({},{})".format(self.a.vid, self.b.vid)
 
+    def __contains__(self, value):
+        return value == self.a or value == self.b
+
