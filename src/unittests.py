@@ -20,7 +20,7 @@ class UnitTests():
         self.testDPBaseCases()
 
         if (self.errors):
-            print('The unit tests have {} errors:'.format(len(self.errors)))
+            print('\nThe unit tests have {} errors:'.format(len(self.errors)))
             print('-----------------------------------')
             for error in self.errors:
                 print(error)
@@ -49,32 +49,31 @@ class UnitTests():
         gi = self.graphInteraction
         gi.createRoot()
 
-        # Test case 0 - Invalid leaf case (tspTable)
-        S = gi.fromDegreesEndpoints([2, 1, 2], [])
+        # Test case 0 - Invalid case (tspTable)
+        S = gi.fromDegreesEndpoints([2, 0, 2], [])
         Xi = gi.graph.vertices[1]
         val = self.graphInteraction.tspTable(S, Xi)
         if val < sys.maxsize:
             self.error('DP test case 0 - val: {}'.format(val))
 
-        # Test case 1 - Valid edge select case (edgeSelect)
-        # Xi = gi.graph.vertices[0]
-        # targetDegrees = [1, 2, 1]
-        # edges = []
-        # for v in Xi.vertices:
-        #     for e in v.edges:
-        #         if e.other(v) not in Xi.vertices:
-        #             continue
-        #         if v.vid < e.other(v).vid:
-        #             edges.append(e)
-        # edges.sort(key=lambda e: e.cost)
-        # val = gi.tspEdgeSelect(sys.maxsize, 0, Xi, edges, targetDegrees, [])
-        # if val != 2:
-        #     self.error('DP test case 1 - val: {}'.format(val))
+        # Test case 1 - Valid leaf case (tspTable)
+        S = gi.fromDegreesEndpoints([1, 2, 1], [2, 4])
+        Xi = gi.graph.vertices[2]
+        val = self.graphInteraction.tspTable(S, Xi)
+        if val != 18:
+            self.error('DP test case 1 - val: {}'.format(val))
 
-        # Test case 2 - Sorting tours
-        vs = gi.graph.originalGraph.vertices
-        edgeList = vs[1].edges + vs[3].edges
-        val = gi.sortTour(edgeList, [], True)
-        if not val or str(edgeList) not in ['[0-1, 1-2, 2-3, 0-3]', '[(0,1), (1,2), (2,3), (0,3)]']:
-            self.error('DP test case 2 - edgeList: {}'.format(edgeList))
+        # Test case 2 - Valid case (tspTable)
+        S = gi.fromDegreesEndpoints([1, 1, 2], [1, 4])
+        Xi = gi.graph.vertices[1]
+        val = self.graphInteraction.tspTable(S, Xi)
+        if val != 38: # 19 + 11 + 8
+            self.error('DP test case 2 - val: {}'.format(val))
+
+        # Test case 3 - checking endpoints membership
+        eps = [1, 2, 1, 5, 3, 4]
+        if gi.inEndpoints(eps, 5, 3):
+            self.error('Endpoints membership test case 3 - false positive')
+        if not gi.inEndpoints(eps, 1, 5):
+            self.error('Endpoints membership test case 3 - false negative')
 

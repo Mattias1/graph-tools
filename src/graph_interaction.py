@@ -183,17 +183,14 @@ class GraphInteraction():
                 print('  {}: {}'.format(key, val))
         if value < sys.maxsize:
             tour = list(set(self.tspReconstruct(S, Xroot)))
-            # self.sortTour(tour, [])
-            print('Tour: {}\n'.format(tour))
+            print('\nDP-TSP:\n  Length: {}\n  Tour: {}\n'.format(value, tour))
 
     def tspTable(self, S, Xi):
         # The smallest value such that all vertices below Xi have degree 2 and vertices in Xi have degrees defined by S
         debug = False
-        if debug: print('=============================')
         if debug: print("A({} {}, X{}): {}".format(self.toDegrees(S), self.toEndpoints(S), Xi.vid, "?"))
         if S in Xi.a:
             if debug: print('lookup return: {}'.format(Xi.a[S]))
-            if debug: print('-----------------------------')
             return Xi.a[S]
         # We don't know this value yet, so we compute it.
         edges = []
@@ -211,7 +208,6 @@ class GraphInteraction():
         Xi.a[S] = self.tspRecurse(Xi, edges, 0, 0, degrees, childDegrees, endpoints, childEndpoints,
                                     self.tspChildEvaluation, min, sys.maxsize)
         if debug: print('calculation return: {}'.format(Xi.a[S]))
-        if debug: print('-----------------------------')
         return Xi.a[S]
 
     def tspChildEvaluation(self, Xi, edges, targetDegrees, childDegrees, endpoints, childEndpoints, resultingEdgeList = None):
@@ -219,10 +215,16 @@ class GraphInteraction():
         # If we analyzed the degrees of all vertices (i.e. we have a complete combination),
         #   return the sum of B values of all children.
         debug = False
+        # Check: all bags (except the root) are not allowed to be a cycle.
+        if not endpoints and Xi.parent:
+            if debug: print('{}All bags should be a cycle - no endpoints given'.format('  ' * len(Xi.vertices)))
+            return sys.maxsize
         # Base cost: the edges needed inside this Xi to account for the (target) degrees we didn't pass on to our children.
-        val = self.tspEdgeSelect(sys.maxsize, 0, Xi, edges, targetDegrees, endpoints, resultingEdgeList)
+        allChildEndpoints = sum(childEndpoints, []) # Flatten the list
+        val = self.tspEdgeSelect(sys.maxsize, 0, Xi, edges, targetDegrees, endpoints, allChildEndpoints, resultingEdgeList)
         if 0 <= val < sys.maxsize:
-            if debug: print('{}Local edge selection cost: {}'.format('  ' * i, val))
+            if debug: print('{}Local edge selection cost: {}, edges: {}, degrees: {}, endpoints: {}, edgeList: {}'.format(
+                                            '  ' * len(Xi.vertices), val, edges, targetDegrees, endpoints, resultingEdgeList))
             for k, cds in enumerate(childDegrees):
                 Xkid = Xi.edges[k].other(Xi)
                 if Xi.parent != Xkid:
@@ -233,12 +235,13 @@ class GraphInteraction():
                             if v == w:
                                 kidDegrees[p] = cds[q]
                     S = self.fromDegreesEndpoints(kidDegrees, childEndpoints[k])
-                    if debug: print('{}temp A: {}, cds: {}, kidDegrees: {}'.format('  ' * i, S, cds, kidDegrees))
+                    if debug: print('{}child A: {}, cds: {}, degrees: {}, endpoints'.format('  ' * len(Xi.vertices),
+                                                                    val, cds, kidDegrees, childEndpoints[k]))
                     # Add to that base cost the cost of hamiltonian paths nescessary to satisfy the degrees.
                     val += self.tspTable(S, Xkid)
-            if debug: print('{}Min cost for X{} with these child-degrees: {}'.format('  ' * i, Xi.vid, val))
+            if debug: print('{}Min cost for X{} with these child-degrees: {}'.format('  ' * len(Xi.vertices), Xi.vid, val))
         else:
-            if debug: print('{}No local edge selection found'.format('  ' * i))
+            if debug: print('{}No local edge selection found'.format('  ' * len(Xi.vertices)))
         return val
 
     def tspReconstruct(self, S, Xi):
@@ -294,7 +297,7 @@ class GraphInteraction():
         #   i = the vertex we currently analyze, j = the child we currently analyze
         #   targetDegrees goes from full to empty, childDegrees from empty to full, endpoints are the endpoints for each child path
         debug = False
-        if debug: print('{}{}{}     (X{}: {}, {})   {}'.format('  ' * i, childDegrees, '  ' * (len(Xi.vertices) + 10 - i), Xi.vid, i, j, targetDegrees))
+        if debug: print('{}{}{}     (X{}: {}, {})   {}|{}'.format('  ' * i, childDegrees, '  ' * (len(Xi.vertices) + 8 - i), Xi.vid, i, j, targetDegrees, endpoints))
         # Final base case.
         if i >= len(Xi.vertices):
             return baseF(Xi, edges, targetDegrees, childDegrees, endpoints, childEndpoints)
@@ -318,16 +321,18 @@ class GraphInteraction():
         # If the current degree is at least 1 (which it is if we get here),
         #   try to combine it (for all other vertices) in a hamiltonian path
         for k in range(i + 1, len(Xi.vertices)):
-            # Todo: check if edge (i, k) is allowed (won't make it a cycle)
+            # Stay in {0, 1, 2}
             if targetDegrees[k] < 1 or childDegrees[j][k] > 1 or Xi.vertices[k] not in Xj.vertices:
+                continue
+            # Don't add edges twice
+            if self.inEndpoints(childEndpoints[j], Xi.vertices[i].vid, Xi.vertices[k].vid):
                 continue
             td, cds, eps = targetDegrees.copy(), [d.copy() for d in childDegrees], [ep.copy() for ep in childEndpoints]
             td[i] -= 1
             cds[j][i] += 1
             td[k] -= 1
             cds[j][k] += 1
-            eps[j].extend([i, k])
-            # Possible TODO: Check if we don't use the same edge twice (we might check this inside tspEdgeSelect already though).
+            eps[j].extend([Xi.vertices[nr].vid for nr in [i, k]])
             # We may have to try to analyze the same vertex again if it's degree is higher than 1
             result = mergeF(result, self.tspRecurse(Xi, edges, i, j, td, cds, endpoints, eps, baseF, mergeF, defaultVal))
         # Also, try not assigning this degree to anyone, we (maybe) can solve it inside Xi
@@ -336,7 +341,7 @@ class GraphInteraction():
         return result
 
     # Todo: use the minimum to abort early??? (is possible for leaf case, but perhaps not for normal bag case
-    def tspEdgeSelect(self, minimum, index, Xi, edges, degrees, endpoints, resultEdgeList = None):
+    def tspEdgeSelect(self, minimum, index, Xi, edges, degrees, endpoints, allChildEndpoints, edgeList = None):
         debug = False
         # Calculate the smallest cost to satisfy the degrees target using only using edges >= the index
         # Base case 1: the degrees are all zero, so we succeeded as we don't need to add any more edges
@@ -346,11 +351,12 @@ class GraphInteraction():
                 satisfied = False
                 break
         if satisfied:
-            if self.sortTour(resultEdgeList, endpoints):
-                if debug: print('Edge select ({}): no need to add edges, min value: 0'.format(index))
-                return 0
-            if debug: print('Edge select ({}): hamiltonian path error'.format(index))
-            return sys.maxsize
+            # So we have chosen all our edges and satisfied the targets - now make sure there is no cycle (unless root)
+            if not self.cycleCheck(endpoints, edgeList, allChildEndpoints):
+                if debug: print('Edge select ({}): edges contain a cycle'.format(index))
+                return sys.maxsize
+            if debug: print('Edge select ({}): no need to add edges, min value: 0'.format(index))
+            return 0
         # Base case 2: we have not succeeded yet, but there are no more edges to add, so we failed
         if index >= len(edges):
             if debug: print('Edge select ({}): no more edges to add'.format(index))
@@ -371,21 +377,22 @@ class GraphInteraction():
         assert assertCounter in {0, 2}
         # Try both to take the edge and not to take the edge
         if debug: print('Edge select ({}), degrees: {}'.format(index, degrees))
-        tempREL = [] if resultEdgeList == None else resultEdgeList.copy()
-        tempREL1, tempREL2 = tempREL + [edge], tempREL.copy()
-        minimum = min(minimum, edge.cost + self.tspEdgeSelect(minimum - edge.cost, index + 1, Xi, edges, deg, endpoints, tempREL1))
-        val = self.tspEdgeSelect(minimum, index + 1, Xi, edges, degrees, endpoints, tempREL2)
+        tempEL = [] if edgeList == None else edgeList.copy()
+        tempEL1, tempEL2 = tempEL + [edge], tempEL.copy()
+        minimum = min(minimum, edge.cost + self.tspEdgeSelect(minimum - edge.cost, index + 1, Xi, edges,
+                                                                    deg, endpoints, allChildEndpoints, tempEL1))
+        val = self.tspEdgeSelect(minimum, index + 1, Xi, edges, degrees, endpoints, allChildEndpoints, tempEL2)
         if val < minimum:
             minimum = val
             # So without edge is better - Append the second edge list
-            if resultEdgeList != None:
-                for e in tempREL2:
-                    resultEdgeList.append(e)
+            if edgeList != None:
+                for e in tempEL2:
+                    edgeList.append(e)
         # So without edge is not better - Append the first edge list
-        elif resultEdgeList != None:
-            for e in tempREL1:
-                resultEdgeList.append(e)
-        if debug: print('Edge select ({}): min value: {}, edges: {}'.format(index, minimum, resultEdgeList))
+        elif edgeList != None:
+            for e in tempEL1:
+                edgeList.append(e)
+        if debug: print('Edge select ({}): min value: {}, edges: {}'.format(index, minimum, edgeList))
         return minimum
 
     def toDegrees(self, S):
@@ -417,43 +424,65 @@ class GraphInteraction():
         setParentRecursive(rootBag, None)
         return rootBag
 
-    def sortTour(self, edgeList, endpoints, sortFinalTour = False):
-        # Sort the edges in the tour by endpoints pair (i = edgeList index, j = endpoints index)
-        # Special case: sort the final tour
-        i, j = 0, 0
+    def cycleCheck(self, endpoints, edgeList, allChildEndpoints):
+        # This method returns whether or not the given edge list and all child endpoints provide a set of paths
+        # satisfying the endpoints and sorts the edge list in place.
+        progressCounter, edgeCounter, endpsCounter, v = -2, 0, 0, None
+        if edgeList == None: edgeList = []
+        debug = False
+
+        # Special case: the root bag.
         if endpoints == []:
-            if sortFinalTour:
+            if len(allChildEndpoints) > 0:
+                endpoints = allChildEndpoints[:2]
+                endpsCounter += 2
+            elif len(edgeList) > 0:
                 endpoints = [edgeList[0].a, edgeList[0].b]
-                i = 1
-            elif edgeList == None or edgeList == []:
-                return True
+                edgeCounter += 1
             else:
-                print('initial false: {} {} {}'.format(edgeList, endpoints, sortFinalTour))
+                if debug: print('ERROR: cycle check root bag has both no edges to add, nor any child endpoints')
                 return False
-        v = endpoints[1]
-        # Find the next edge in the tour and put it at the front of the list (the not processed part)
-        for i in range(i, len(edgeList)):
-            for k in range(i, len(edgeList)):
-                if v in edgeList[k]:
-                    v = edgeList[k].other(v)
-                    edgeList[i], edgeList[k] = edgeList[k], edgeList[i]
-                    break
-                # If there are no edges left, but we are not at the right end point, than we are creating the wrong path
-                # (it might be closed later, so we have an early cycle).
-                if k == len(edgeList) - 1:
-                    print('ERROR: invalid tour - hamiltonian path error: {} {}'.format(edgeList, endpoints))
-                    return False
-            # Check if we completed the hamiltonian path
-            if endpoints[j] == v:
-                j += 2
-                # And chack if we completed the entire tour
-                if j >= len(endpoints):
-                    if i < len(edgeList) - 1:
-                        print('ERROR: invalid tour (graph_interaction - sortTour)')
+
+        # Normal case
+        while True:
+            # If we completed the path
+            if v == None or v.vid == endpoints[progressCounter + 1]:
+                progressCounter += 2
+                if progressCounter >= len(endpoints):
+                    if edgeCounter == len(edgeList) and endpsCounter == len(allChildEndpoints):
+                        return True
+                    else:
+                        if debug: print('ERROR: all endpoints are satisfied, but there are edges or endpoints left')
                         return False
-                    return True
-                v = endpoints[j + 1]
-        return True
+                v = self.graph.originalGraph.vertices[endpoints[progressCounter]]
+
+            # Find the next vertex
+            for i in range(endpsCounter, len(allChildEndpoints), 2):
+                if v.vid in allChildEndpoints[i : i + 2]:
+                    v = self.graph.originalGraph.vertices[allChildEndpoints[i + 1 if i % 2 == 0 else i]]
+                    allChildEndpoints[endpsCounter : endpsCounter + 2], allChildEndpoints[i : i + 2] = allChildEndpoints[
+                                                            i : i + 2], allChildEndpoints[endpsCounter : endpsCounter + 2]
+                    endpsCounter += 2
+                    break
+            else:
+                for i in range(edgeCounter, len(edgeList)):
+                    if v in edgeList[i]:
+                        v = edgeList[i].other(v)
+                        edgeList[edgeCounter], edgeList[i] = edgeList[i], edgeList[edgeCounter]
+                        edgeCounter += 1
+                        break
+                else:
+                    if debug: print('ERROR, no more endpoints or edges found according to specs')
+                    return False
+        if debug: print('ERROR: The code should not come here')
+        return False
+
+    def inEndpoints(self, endpoints, start, end):
+        # Return whether or not this combination of endpoints (or reversed order) is already in the endpoints list
+        for j in range(0, len(endpoints), 2):
+            if (endpoints[j] == start and endpoints[j + 1] == end) or (endpoints[j + 1] == start and endpoints[j] == end):
+                return True
+        return False
 
     #
     # Misc
@@ -493,8 +522,7 @@ class GraphInteraction():
     def openFile(self):
         """Open a file"""
         # path = self.mainWin.app.broOpen()
-        path = "test-graph-2.txt"
-        # path = "graph-unittests.txt"
+        path = "graph-unittests.txt"
         self.openFileWithPath(path)
 
     def openFileWithPath(self, path):
