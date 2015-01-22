@@ -48,6 +48,8 @@ class Graph(GraphBase):
         return GraphBase.addVertex(self, v)
 
     def addEdge(self, vidA, vidB, cost=None):
+        if cost == None and not self.isEuclidean:
+            cost = 1
         edge = Edge(self.vertices[vidA], self.vertices[vidB], cost)
         result = False
         if edge.a.addEdge(edge):

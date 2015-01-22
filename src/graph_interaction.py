@@ -437,7 +437,7 @@ class GraphInteraction():
                 endpoints = allChildEndpoints[:2]
                 endpsCounter += 2
             elif len(edgeList) > 0:
-                endpoints = [edgeList[0].a, edgeList[0].b]
+                endpoints = [edgeList[0].a.vid, edgeList[0].b.vid]
                 edgeCounter += 1
             else:
                 if debug: print('ERROR: cycle check root bag has both no edges to add, nor any child endpoints')
@@ -445,6 +445,14 @@ class GraphInteraction():
 
         # Normal case
         while True:
+            # Dump the state
+            if debug:
+                print('cycle check dump 1:')
+                print('  endpoints: {}'.format(endpoints))
+                print('  edgeList: {} - {}'.format(edgeCounter, edgeList))
+                print('  kid endpoints: {} - {}'.format(endpsCounter, allChildEndpoints))
+                print('  progress: {} - v: {}\n'.format(progressCounter, -1 if not v else v.vid))
+
             # If we completed the path
             if v == None or v.vid == endpoints[progressCounter + 1]:
                 progressCounter += 2
@@ -456,10 +464,18 @@ class GraphInteraction():
                         return False
                 v = self.graph.originalGraph.vertices[endpoints[progressCounter]]
 
+            # Dump the state
+            if debug:
+                print('cycle check dump 2:')
+                print('  endpoints: {}'.format(endpoints))
+                print('  edgeList: {} - {}'.format(edgeCounter, edgeList))
+                print('  kid endpoints: {} - {}'.format(endpsCounter, allChildEndpoints))
+                print('  progress: {} - v: {}\n'.format(progressCounter, -1 if not v else v.vid))
+
             # Find the next vertex
             for i in range(endpsCounter, len(allChildEndpoints), 2):
                 if v.vid in allChildEndpoints[i : i + 2]:
-                    v = self.graph.originalGraph.vertices[allChildEndpoints[i + 1 if i % 2 == 0 else i]]
+                    v = self.graph.originalGraph.vertices[allChildEndpoints[i + 1 if v.vid == allChildEndpoints[i] else i]]
                     allChildEndpoints[endpsCounter : endpsCounter + 2], allChildEndpoints[i : i + 2] = allChildEndpoints[
                                                             i : i + 2], allChildEndpoints[endpsCounter : endpsCounter + 2]
                     endpsCounter += 2
@@ -472,6 +488,7 @@ class GraphInteraction():
                         edgeCounter += 1
                         break
                 else:
+                    if debug: print('eps: {}, edgelist: {}, all kid eps: {}'.format(endpoints, edgeList, allChildEndpoints))
                     if debug: print('ERROR, no more endpoints or edges found according to specs')
                     return False
         if debug: print('ERROR: The code should not come here')
@@ -521,8 +538,7 @@ class GraphInteraction():
 
     def openFile(self):
         """Open a file"""
-        # path = self.mainWin.app.broOpen()
-        path = "graph-unittests.txt"
+        path = self.mainWin.app.broOpen()
         self.openFileWithPath(path)
 
     def openFileWithPath(self, path):
@@ -530,7 +546,7 @@ class GraphInteraction():
             return
         with open(path) as f:
             # Looks like the file opening went right. Good, now first create the new graph.
-            self.graph = TreeDecomposition(Graph())
+            self.graph = TreeDecomposition(Graph(False))
             origGraph = self.graph.originalGraph if self.isTreeDecomposition else self.graph
             self.mainWin.app.setTitle()
             comp = lambda line, s: line[0:len(s)] == s

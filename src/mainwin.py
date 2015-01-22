@@ -42,6 +42,8 @@ class MainWin(Win):
         selectedVs = self.graphInteraction.selectedVertices
         offset = self.mousePos - self.mouseDownStartPos if self.mouseDownButton == 1 else Pos(0, 0)
 
+        isTreeDecomposition = type(graph) == TreeDecomposition
+
         # Draw all edges
         for v in graph.vertices:
             for e in v.edges:
@@ -51,11 +53,12 @@ class MainWin(Win):
                     pa, pb = v.pos + ofsA, e.other(v).pos + ofsB
                     self.drawLine(self.colors.edge, pa, pb)
                     anchor = "nw" if (pa.x < pb.x) != (pa.y < pb.y) else "ne"
-                    self.drawString(str(e.cost), self.colors.hover, 0.5 * (pa + pb) + (0, 2), anchor)
+                    if not isTreeDecomposition:
+                        self.drawString(str(e.cost), self.colors.hover, 0.5 * (pa + pb) + (0, 2), anchor)
 
         # Draw the hovered vertex
         isBag = type(self.graphInteraction.hoverVertex) == Bag
-        if self.graphInteraction.hoverVertex and (type(graph) == TreeDecomposition) == isBag:
+        if self.graphInteraction.hoverVertex and isTreeDecomposition == isBag:
             r = self.settings.selectradius + (self.settings.bagextra if isBag else 0)
             ofs = offset if self.graphInteraction.hoverVertex in selectedVs else Pos(0, 0)
             self.drawDisc(self.colors.hover, self.graphInteraction.hoverVertex.pos + ofs, r)
