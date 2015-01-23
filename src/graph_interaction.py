@@ -1,3 +1,4 @@
+import cProfile
 import sys
 import json
 from .settings import *
@@ -169,7 +170,11 @@ class GraphInteraction():
     #
     # Dynamic Programming Algorithm
     #
-    def tspDP(self): # Possible problem: how to make sure I get paths and not cycles.
+    def tspDP(self):
+        """Temp tsp"""
+        cProfile.runctx('self.temptemptemp()', globals(), locals())
+
+    def temptemptemp(self):
         """Compute the smallest tour using DP on a tree decomposition"""
         if not self.isTreeDecomposition or len(self.graph.vertices) < 1:
             return
@@ -512,6 +517,7 @@ class GraphInteraction():
         """Save the graph to file"""
         origGraph = self.graph.originalGraph if self.isTreeDecomposition else self.graph
         s = ""
+        s += "DIMENSION : {}\n".format(len(origGraph.vertices))
         if origGraph.isEuclidean:
             s += "EDGE_WEIGHT_TYPE : EUC_2D\n"
         s += "NODE_COORD_SECTION\n"

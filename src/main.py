@@ -12,7 +12,6 @@ class Application(Frame):
         """The tkinter frame that manages the canvas and the keyboard and mouse interaction"""
         frame_init(self, master)
         self.setTitle()
-
         self.resetModifyKeys()
 
         self.canvas = Cnvs(master, bd=-2)
