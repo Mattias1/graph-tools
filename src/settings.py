@@ -13,6 +13,7 @@ class Settings():
         self.font = ('Consolas', 10)
         self.drawsmall = False
         self.drawtext = True
+        self.vidStart = 1 # The id of the first vertex (in the save files - in the program everything starts with 0 of course)
         self.vertexradiussmall = 4      #px
         self.vertexradiusbig = 20       #px
         self.selectradius = 30          #px

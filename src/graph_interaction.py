@@ -516,22 +516,23 @@ class GraphInteraction():
     def saveAs(self):
         """Save the graph to file"""
         origGraph = self.graph.originalGraph if self.isTreeDecomposition else self.graph
+        vidStart = self.mainWin.settings.vidStart
         s = ""
         s += "DIMENSION : {}\n".format(len(origGraph.vertices))
         if origGraph.isEuclidean:
             s += "EDGE_WEIGHT_TYPE : EUC_2D\n"
         s += "NODE_COORD_SECTION\n"
         for v in origGraph.vertices:
-            s += "{} {} {}\n".format(v.vid, v.pos.x, v.pos.y)
+            s += "{} {} {}\n".format(v.vid + vidStart, v.pos.x, v.pos.y)
         s += "EDGE_SECTION\n"
         for v in origGraph.vertices:
             for e in v.edges:
                 if v.vid < e.other(v).vid:
-                    s += "{} {} {}\n".format(e.a.vid, e.b.vid, e.cost)
+                    s += "{} {} {}\n".format(e.a.vid + vidStart, e.b.vid + vidStart, e.cost)
         if self.isTreeDecomposition:
             s += "BAG_COORD_SECTION\n"
             for b in self.graph.vertices:
-                s += "{} {} {}".format(b.vid, b.pos.x, b.pos.y)
+                s += "{} {} {}".format(b.vid + vidStart, b.pos.x, b.pos.y)
                 for v in b.vertices:
                     s += " " + str(v.vid)
                 s += "\n"
@@ -539,7 +540,7 @@ class GraphInteraction():
             for b in self.graph.vertices:
                 for e in b.edges:
                     if e.a.vid < e.b.vid:
-                        s += "{} {}\n".format(e.a.vid, e.b.vid)
+                        s += "{} {}\n".format(e.a.vid + vidStart, e.b.vid + vidStart)
         self.mainWin.app.broSave(s, True)
 
     def openFile(self):
@@ -557,6 +558,7 @@ class GraphInteraction():
             self.mainWin.app.setTitle()
             comp = lambda line, s: line[0:len(s)] == s
             state = 0 # 0=nothing, 1=vertices, 2=edges, 3=bags, 4=bag edges
+            vidStart = self.mainWin.settings.vidStart
 
             # And lets now fill the graph with some sensible stuff.
             for line in f:
@@ -575,16 +577,16 @@ class GraphInteraction():
                 elif comp(line, "BAG_EDGE_SECTION"): state = 4
                 # Add vertices, edges, bags or bag edges
                 elif state == 1:
-                    origGraph.addVertex(Vertex(origGraph, int(l[0]), Pos(int(l[1]), int(l[2]))))
+                    origGraph.addVertex(Vertex(origGraph, int(l[0]) - vidStart, Pos(int(l[1]), int(l[2]))))
                 elif state == 2:
-                    origGraph.addEdge(int(l[0]), int(l[1]), int(l[2]))
+                    origGraph.addEdge(int(l[0]) - vidStart, int(l[1]) - vidStart, int(l[2]))
                 elif state == 3:
-                    bag = Bag(self.graph, int(l[0]), Pos(int(l[1]), int(l[2])))
+                    bag = Bag(self.graph, int(l[0]) - vidStart, Pos(int(l[1]), int(l[2])))
                     for v in l[3:]:
-                        bag.addVertex(origGraph.vertices[int(v)])
+                        bag.addVertex(origGraph.vertices[int(v) - vidStart])
                     self.graph.addVertex(bag)
                 elif state == 4:
-                    self.graph.addEdge(int(l[0]), int(l[1]), 1)
+                    self.graph.addEdge(int(l[0]) - vidStart, int(l[1]) - vidStart, 1)
         self.redraw()
 
     def keymapToStr(self):
