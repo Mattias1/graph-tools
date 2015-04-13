@@ -33,8 +33,8 @@ class GraphInteraction():
             't': self.treeify,
             '1': self.toggleDrawText,
             '2': self.toggleDrawSize,
-            '-': self.zoomIn,
-            '+': self.zoomOut,
+            '-': self.zoomOut,
+            '+': self.zoomIn,
             '=': self.resetZoom,
             'q': self.tspDP,
             'Ctrl-s': self.saveAs,
@@ -175,12 +175,12 @@ class GraphInteraction():
         self.mainWin.settings.drawsize = (self.mainWin.settings.drawsize + 1) % 3
         self.redraw()
 
-    def zoomIn(self):
-        """Zoom in"""
-        self.mainWin.scaleFactor /= 2
-        self.redraw()
     def zoomOut(self):
         """Zoom out"""
+        self.mainWin.scaleFactor /= 2
+        self.redraw()
+    def zoomIn(self):
+        """Zoom in"""
         self.mainWin.scaleFactor *= 2
         self.redraw()
     def resetZoom(self):
@@ -612,8 +612,11 @@ class GraphInteraction():
                     self.graph.addEdge(int(l[0]) - vidStart, int(l[1]) - vidStart, 1)
 
         # Change some settings for large graphs
-        self.mainWin.settings.drawtext = False
-        self.mainWin.settings.drawsize = 0
+        if len(origGraph.vertices) > 30:
+            self.mainWin.settings.drawtext = False
+            self.mainWin.settings.drawsize = 0
+            for _ in range(5):
+                self.zoomOut()
         self.redraw()
 
     def keymapToStr(self):
