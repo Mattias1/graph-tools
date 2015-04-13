@@ -1,4 +1,4 @@
-import cProfile
+# import cProfile
 import sys
 import json
 from .settings import *
@@ -32,6 +32,10 @@ class GraphInteraction():
             'p': self.pathify,
             't': self.treeify,
             '1': self.toggleDrawText,
+            '2': self.toggleDrawSize,
+            '-': self.zoomIn,
+            '+': self.zoomOut,
+            '=': self.resetZoom,
             'q': self.tspDP,
             'Ctrl-s': self.saveAs,
             'Ctrl-o': self.openFile,
@@ -166,13 +170,31 @@ class GraphInteraction():
         """Toggle drawtext settings"""
         self.mainWin.settings.drawtext = not self.mainWin.settings.drawtext
         self.redraw()
+    def toggleDrawSize(self):
+        """Toggle draw size settings"""
+        self.mainWin.settings.drawsize = (self.mainWin.settings.drawsize + 1) % 3
+        self.redraw()
+
+    def zoomIn(self):
+        """Zoom in"""
+        self.mainWin.scaleFactor /= 2
+        self.redraw()
+    def zoomOut(self):
+        """Zoom out"""
+        self.mainWin.scaleFactor *= 2
+        self.redraw()
+    def resetZoom(self):
+        """Reset zoom"""
+        self.mainWin.scaleFactor = 1
+        self.redraw()
 
     #
     # Dynamic Programming Algorithm
     #
     def tspDP(self):
         """Temp tsp"""
-        cProfile.runctx('self.temptemptemp()', globals(), locals())
+        # cProfile.runctx('self.temptemptemp()', globals(), locals())
+        self.temptemptemp()
 
     def temptemptemp(self):
         """Compute the smallest tour using DP on a tree decomposition"""
@@ -219,7 +241,7 @@ class GraphInteraction():
         # This method is the base case for the calculate tsp recurse method.
         # If we analyzed the degrees of all vertices (i.e. we have a complete combination),
         #   return the sum of B values of all children.
-        debug = False
+        debug = True
         # Check: all bags (except the root) are not allowed to be a cycle.
         if not endpoints and Xi.parent:
             if debug: print('{}All bags should be a cycle - no endpoints given'.format('  ' * len(Xi.vertices)))
@@ -240,7 +262,7 @@ class GraphInteraction():
                             if v == w:
                                 kidDegrees[p] = cds[q]
                     S = self.fromDegreesEndpoints(kidDegrees, childEndpoints[k])
-                    if debug: print('{}child A: {}, cds: {}, degrees: {}, endpoints'.format('  ' * len(Xi.vertices),
+                    if debug: print('{}child A: {}, cds: {}, degrees: {}, endpoints: {}'.format('  ' * len(Xi.vertices),
                                                                     val, cds, kidDegrees, childEndpoints[k]))
                     # Add to that base cost the cost of hamiltonian paths nescessary to satisfy the degrees.
                     val += self.tspTable(S, Xkid)
@@ -301,7 +323,7 @@ class GraphInteraction():
         # Select all possible mixes of degrees for all vertices and evaluate them
         #   i = the vertex we currently analyze, j = the child we currently analyze
         #   targetDegrees goes from full to empty, childDegrees from empty to full, endpoints are the endpoints for each child path
-        debug = False
+        debug = True
         if debug: print('{}{}{}     (X{}: {}, {})   {}|{}'.format('  ' * i, childDegrees, '  ' * (len(Xi.vertices) + 8 - i), Xi.vid, i, j, targetDegrees, endpoints))
         # Final base case.
         if i >= len(Xi.vertices):
@@ -347,8 +369,8 @@ class GraphInteraction():
 
     # Todo: use the minimum to abort early??? (is possible for leaf case, but perhaps not for normal bag case
     def tspEdgeSelect(self, minimum, index, Xi, edges, degrees, endpoints, allChildEndpoints, edgeList = None):
-        debug = False
         # Calculate the smallest cost to satisfy the degrees target using only using edges >= the index
+        debug = False
         # Base case 1: the degrees are all zero, so we succeeded as we don't need to add any more edges
         satisfied = True
         for d in degrees:
@@ -380,6 +402,7 @@ class GraphInteraction():
                 deg[i] -= 1
                 assertCounter += 1
         assert assertCounter in {0, 2}
+
         # Try both to take the edge and not to take the edge
         if debug: print('Edge select ({}), degrees: {}'.format(index, degrees))
         tempEL = [] if edgeList == None else edgeList.copy()
@@ -432,9 +455,9 @@ class GraphInteraction():
     def cycleCheck(self, endpoints, edgeList, allChildEndpoints):
         # This method returns whether or not the given edge list and all child endpoints provide a set of paths
         # satisfying the endpoints and sorts the edge list in place.
+        debug = True
         progressCounter, edgeCounter, endpsCounter, v = -2, 0, 0, None
         if edgeList == None: edgeList = []
-        debug = False
 
         # Special case: the root bag.
         if endpoints == []:
@@ -587,6 +610,10 @@ class GraphInteraction():
                     self.graph.addVertex(bag)
                 elif state == 4:
                     self.graph.addEdge(int(l[0]) - vidStart, int(l[1]) - vidStart, 1)
+
+        # Change some settings for large graphs
+        self.mainWin.settings.drawtext = False
+        self.mainWin.settings.drawsize = 0
         self.redraw()
 
     def keymapToStr(self):

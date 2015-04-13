@@ -14,6 +14,7 @@ class MainWin(Win):
         self.mouseDownButton = -1
         self.mouseDownStartPos = Pos(-1, -1)
         self.redrawMarker = False
+        self.scaleFactor = 1
 
         self.graphInteraction = GraphInteraction(self)
 
@@ -50,38 +51,40 @@ class MainWin(Win):
                 if v.vid < e.other(v).vid:
                     ofsA = offset if v in selectedVs else Pos(0, 0)
                     ofsB = offset if e.other(v) in selectedVs else Pos(0, 0)
-                    pa, pb = v.pos + ofsA, e.other(v).pos + ofsB
+                    pa, pb = v.pos * self.scaleFactor + ofsA, e.other(v).pos * self.scaleFactor + ofsB
                     self.drawLine(self.colors.edge, pa, pb)
                     anchor = "nw" if (pa.x < pb.x) != (pa.y < pb.y) else "ne"
-                    if not isTreeDecomposition:
+                    if self.settings.drawsize > 0 and not isTreeDecomposition:
                         self.drawString(str(e.cost), self.colors.hover, 0.5 * (pa + pb) + (0, 2), anchor)
 
-        # Draw the hovered vertex
-        isBag = type(self.graphInteraction.hoverVertex) == Bag
-        if self.graphInteraction.hoverVertex and isTreeDecomposition == isBag:
-            r = self.settings.selectradius + (self.settings.bagextra if isBag else 0)
-            ofs = offset if self.graphInteraction.hoverVertex in selectedVs else Pos(0, 0)
-            self.drawDisc(self.colors.hover, self.graphInteraction.hoverVertex.pos + ofs, r)
+        if self.settings.drawsize > 0:
+            # Draw the hovered vertex
+            isBag = type(self.graphInteraction.hoverVertex) == Bag
+            if self.graphInteraction.hoverVertex and isTreeDecomposition == isBag:
+                r = self.settings.selectradius + (self.settings.bagextra if isBag else 0)
+                ofs = offset if self.graphInteraction.hoverVertex in selectedVs else Pos(0, 0)
+                self.drawDisc(self.colors.hover, self.graphInteraction.hoverVertex.pos * self.scaleFactor + ofs, r)
 
-        # Draw all vertices
-        for v in graph.vertices:
-            # Draw the disc
-            isBag = type(v) == Bag
-            c = self.colors.normal if self.settings.drawsmall else self.colors.hover
-            c = self.colors.selected if v in selectedVs else c
-            r = self.settings.vertexradiussmall if self.settings.drawsmall else self.settings.vertexradiusbig
-            if isBag: r += self.settings.bagextra
-            ofs = offset if v in selectedVs else Pos(0, 0)
-            self.drawDisc(c, v.pos + ofs, r)
+            # Draw all vertices
+            for v in graph.vertices:
+                # Draw the disc
+                isBag = type(v) == Bag
+                c = self.colors.normal if self.settings.drawsize == 1 else self.colors.hover
+                c = self.colors.selected if v in selectedVs else c
+                r = self.settings.vertexradiussmall if self.settings.drawsize == 1 else self.settings.vertexradiusbig
+                if isBag: r += self.settings.bagextra
+                ofs = offset if v in selectedVs else Pos(0, 0)
+                self.drawDisc(c, v.pos * self.scaleFactor + ofs, r)
 
-            # Draw the text
-            f = (lambda x: chr(x.vid + ord('a'))) if self.settings.drawtext else lambda x: str(x.vid)
-            bagText = ""
-            if isBag:
-                bagText = "\n" if not v.parent else ("\nparent: " + f(v.parent) + "\n")
-                bagText += "v: " + ' '.join(map(f, v.vertices))
-            c = self.colors.selectedtext if v in selectedVs else self.colors.text
-            self.drawString(f(v) + bagText, c, v.pos + ofs, 'c')
+                # Draw the text
+                if self.settings.drawsize > 1:
+                    f = (lambda x: chr(x.vid + ord('a'))) if self.settings.drawtext else lambda x: str(x.vid)
+                    bagText = ""
+                    if isBag:
+                        bagText = "\n" if not v.parent else ("\nparent: " + f(v.parent) + "\n")
+                        bagText += "v: " + ' '.join(map(f, v.vertices))
+                    c = self.colors.selectedtext if v in selectedVs else self.colors.text
+                    self.drawString(f(v) + bagText, c, v.pos * self.scaleFactor + ofs, 'c')
 
     def drawHelp(self):
         """Draw help text"""
@@ -197,11 +200,12 @@ class MainWin(Win):
         # Move vertices
         elif self.mouseDownButton == 1 and self.mouseDownStartPos != (-1, -1):
             for v in self.graphInteraction.selectedVertices:
-                v.pos += p - self.mouseDownStartPos
+                v.pos += (1 / self.scaleFactor) * (p - self.mouseDownStartPos)
 
         # Clean up
         self.mouseDownStartPos = Pos(-1, -1)
         self.mouseDownButton = -1
+        self.redraw()
 
     def onKeyDown(self, c):
         if c in self.graphInteraction.keymap:

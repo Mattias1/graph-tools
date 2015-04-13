@@ -52,12 +52,13 @@ class Application(Frame):
     def broSave(self, content, name=False):
         """Save content to file"""
         f = filedialog.asksaveasfile(mode='w', defaultextension=".txt")
+        if f is None: # asksaveasfile returns `None` if the dialog is closed with 'cancel'.
+            self.resetModifyKeys()
+            return
         if name:
             filename = os.path.splitext(os.path.basename(f.name))[0]
             content = "NAME : {}\n{}".format(filename, content)
             self.setTitle(filename)
-        if f is None: # asksaveasfile returns `None` if the dialog is closed with 'cancel'.
-            return
         f.write(content)
         f.close()
         self.resetModifyKeys()

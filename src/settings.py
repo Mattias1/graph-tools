@@ -11,7 +11,8 @@ class Settings():
         self.size = Size(1050, 700)
         self.offset = Pos(40, 20)
         self.font = ('Consolas', 10)
-        self.drawsmall = False
+        self.drawsize = 2   # Range is [0, 2]: the larger the value, the larger the vertex size
+                            # (with < 2 it also stops drawing edge sizes amoungst others)
         self.drawtext = True
         self.vidStart = 1 # The id of the first vertex (in the save files - in the program everything starts with 0 of course)
         self.vertexradiussmall = 4      #px
@@ -53,7 +54,7 @@ class Pos():
         return self + (-other[0], -other[1])
 
     def __mul__(self, constant):
-        return Size(constant * self.x, constant * self.y)
+        return Pos(constant * self.x, constant * self.y)
     def __rmul__(self, constant):
         return self * constant
 
