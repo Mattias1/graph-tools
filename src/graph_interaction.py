@@ -241,7 +241,7 @@ class GraphInteraction():
         # This method is the base case for the calculate tsp recurse method.
         # If we analyzed the degrees of all vertices (i.e. we have a complete combination),
         #   return the sum of B values of all children.
-        debug = True
+        debug = False
         # Check: all bags (except the root) are not allowed to be a cycle.
         if not endpoints and Xi.parent:
             if debug: print('{}All bags should be a cycle - no endpoints given'.format('  ' * len(Xi.vertices)))
@@ -323,7 +323,7 @@ class GraphInteraction():
         # Select all possible mixes of degrees for all vertices and evaluate them
         #   i = the vertex we currently analyze, j = the child we currently analyze
         #   targetDegrees goes from full to empty, childDegrees from empty to full, endpoints are the endpoints for each child path
-        debug = True
+        debug = False
         if debug: print('{}{}{}     (X{}: {}, {})   {}|{}'.format('  ' * i, childDegrees, '  ' * (len(Xi.vertices) + 8 - i), Xi.vid, i, j, targetDegrees, endpoints))
         # Final base case.
         if i >= len(Xi.vertices):
@@ -455,7 +455,7 @@ class GraphInteraction():
     def cycleCheck(self, endpoints, edgeList, allChildEndpoints):
         # This method returns whether or not the given edge list and all child endpoints provide a set of paths
         # satisfying the endpoints and sorts the edge list in place.
-        debug = True
+        debug = False
         progressCounter, edgeCounter, endpsCounter, v = -2, 0, 0, None
         if edgeList == None: edgeList = []
 
