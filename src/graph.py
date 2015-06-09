@@ -25,6 +25,16 @@ class GraphBase():
         self.vertices.append(vertex)
         return True
 
+    def removeVertex(self, vertex):
+        """Remove a vertex and fix edges and vids"""
+        assert self.vertices[vertex.vid].vid == vertex.vid
+        edgeCopy = vertex.edges.copy()
+        for e in edgeCopy:
+            self.removeEdge(vertex.vid, e.other(vertex).vid)
+        del self.vertices[vertex.vid]
+        for i, v in enumerate(self.vertices):
+            v.vid = i
+
     def addEdge(self, vidA, vidB, cost=0):
         raise NotImplementedError("Adding edges is not implemented")
 

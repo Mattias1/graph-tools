@@ -16,6 +16,9 @@ class GraphInteraction():
         self.mainWin = mainWin
         self.isTreeDecomposition = type(self.graph) == TreeDecomposition
 
+        # LOL, this is actually nescessary for some graphs (500 vertices)
+        sys.setrecursionlimit(2000)
+
     def redraw(self):
         self.mainWin.redraw()
 
@@ -97,8 +100,13 @@ class GraphInteraction():
 
     def removeVertices(self):
         """Remove the selected vertices"""
+        for v in self.selectedVertices:
+            if type(v) == Bag:
+                self.graph.removeVertex(v)
+            else:
+                self.graph.originalGraph.removeVertex(v)
+        self.selectedVertices = []
         self.redraw()
-        pass
 
     def cliqueify(self):
         """Add or remove edges between all selected vertices"""
@@ -323,7 +331,7 @@ class GraphInteraction():
         # Select all possible mixes of degrees for all vertices and evaluate them
         #   i = the vertex we currently analyze, j = the child we currently analyze
         #   targetDegrees goes from full to empty, childDegrees from empty to full, endpoints are the endpoints for each child path
-        debug = False
+        debug = True and isinstance(defaultVal, int)
         if debug: print('{}{}{}     (X{}: {}, {})   {}|{}'.format('  ' * i, childDegrees, '  ' * (len(Xi.vertices) + 8 - i), Xi.vid, i, j, targetDegrees, endpoints))
         # Final base case.
         if i >= len(Xi.vertices):
@@ -360,6 +368,15 @@ class GraphInteraction():
             td[k] -= 1
             cds[j][k] += 1
             eps[j].extend([Xi.vertices[nr].vid for nr in [i, k]])
+
+
+            # DEBUG DEBUG DEBUG
+            for test1 in range(len(eps[j]) - 1):
+                for test2 in range(test1 + 1, len(eps[j])):
+                    if eps[j][test1] == eps[j][test2]:
+                        print("NOOOOOOOOOOOOOOOO! - some endpoints are occuring twice in the eps list: {}".format(eps[j]));
+
+
             # We may have to try to analyze the same vertex again if it's degree is higher than 1
             result = mergeF(result, self.tspRecurse(Xi, edges, i, j, td, cds, endpoints, eps, baseF, mergeF, defaultVal))
         # Also, try not assigning this degree to anyone, we (maybe) can solve it inside Xi
