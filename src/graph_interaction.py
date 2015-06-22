@@ -615,6 +615,8 @@ class GraphInteraction():
                 elif comp(line, "EDGE_SECTION"): state = 2
                 elif comp(line, "BAG_COORD_SECTION"): state = 3
                 elif comp(line, "BAG_EDGE_SECTION"): state = 4
+                elif comp(line, "DEMAND_SECTION"): state = 5
+                elif comp(line, "DEPOT_SECTION"): state = 6
                 # Add vertices, edges, bags or bag edges
                 elif state == 1:
                     origGraph.addVertex(Vertex(origGraph, int(l[0]) - vidStart, Pos(int(l[1]), int(l[2]))))
