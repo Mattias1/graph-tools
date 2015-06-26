@@ -40,6 +40,7 @@ class GraphInteraction():
             '+': self.zoomIn,
             '=': self.resetZoom,
             'q': self.tspDP,
+            'w': self.tikz,
             'Ctrl-s': self.saveAs,
             'Ctrl-o': self.openFile,
             'Ctrl-c': self.quit
@@ -197,6 +198,46 @@ class GraphInteraction():
         self.redraw()
 
     #
+    # Parse to tikz
+    #
+    def tikz(self):
+        """Output the LaTeX tikz-code that draws the current graph (and TD)"""
+        # Some configuration that might (or might not) be usefull to have in the LaTeX document.
+        #   \tikzstyle{vertex2} = [circle,fill=black!25,minimum size=18pt,align=center,font=\tiny]
+        #   \tikzstyle{vertex1} = [circle,fill=black!25,minimum size=8pt,align=center,font=\tiny]
+        #   \tikzstyle{vertex0} = [circle,minimum size=1pt]
+        #   \tikzstyle{bag} = [circle,fill=black!25,minimum size=35pt,align=center,text width=35pt,font=\tiny]
+        #   \tikzstyle{edge} = [draw,-]
+        #   \tikzstyle{arc} = [draw,->-]
+        #   \tikzstyle{weight} = [font=\small]
+        z = 1 / 100
+        print(r"\begin{figure}")
+        print(r"\centering")
+        print(r"\begin{tikzpicture}[auto,swap]")
+
+        for v in self.graph.originalGraph.vertices:
+            print(r"\node[vertex{}] ({}) at ({:.2}, {:.2}) {{{}}};".format(
+                self.mainWin.settings.drawsize, v.vid, v.pos.x * z, -v.pos.y * z, v.vid
+            ))
+
+        for v in self.graph.originalGraph.vertices:
+            for e in v.edges:
+                print(r"\path[edge] ({}) to ({});".format(v.vid, e.other(v).vid))
+
+        for b in self.graph.vertices:
+            print(r"\node[bag] ({}) at ({:.2}, {:.2}) {{{}: {}}};".format(
+                b.vid, b.pos.x * z, -b.pos.y * z, b.vid, str([v.vid for v in b.vertices])[1:-1]
+            ))
+
+        for b in self.graph.vertices:
+            for e in b.edges:
+                print(r"\path[edge] ({}) to ({});".format(b.vid, e.other(b).vid))
+
+        print(r"\end{tikzpicture}")
+        print(r"\caption{TODO}")
+        print(r"\end{figure}")
+
+    #
     # Dynamic Programming Algorithm
     #
     def tspDP(self):
@@ -331,7 +372,7 @@ class GraphInteraction():
         # Select all possible mixes of degrees for all vertices and evaluate them
         #   i = the vertex we currently analyze, j = the child we currently analyze
         #   targetDegrees goes from full to empty, childDegrees from empty to full, endpoints are the endpoints for each child path
-        debug = True and isinstance(defaultVal, int)
+        debug = False and isinstance(defaultVal, int)
         if debug: print('{}{}{}     (X{}: {}, {})   {}|{}'.format('  ' * i, childDegrees, '  ' * (len(Xi.vertices) + 8 - i), Xi.vid, i, j, targetDegrees, endpoints))
         # Final base case.
         if i >= len(Xi.vertices):
