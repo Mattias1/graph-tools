@@ -16,7 +16,7 @@ class GraphInteraction():
         self.mainWin = mainWin
         self.isTreeDecomposition = type(self.graph) == TreeDecomposition
 
-        # LOL, this is actually nescessary for some graphs (500 vertices)
+        # LOL, this is actually nescessary for (DP on) some graphs (500 vertices)
         sys.setrecursionlimit(2000)
 
     def redraw(self):
@@ -43,7 +43,8 @@ class GraphInteraction():
             'w': self.tikz,
             'Ctrl-s': self.saveAs,
             'Ctrl-o': self.openFile,
-            'Ctrl-c': self.quit
+            'Ctrl-c': self.quit,
+            'Ctrl-d': self.quit
         }
 
     #
@@ -181,7 +182,7 @@ class GraphInteraction():
         self.redraw()
     def toggleDrawSize(self):
         """Toggle draw size settings"""
-        self.mainWin.settings.drawsize = (self.mainWin.settings.drawsize + 1) % 3
+        self.mainWin.settings.drawsize = (self.mainWin.settings.drawsize + 2) % 3
         self.redraw()
 
     def zoomOut(self):
@@ -222,6 +223,8 @@ class GraphInteraction():
 
         for v in self.graph.originalGraph.vertices:
             for e in v.edges:
+                if v.vid > e.other(v).vid:
+                    continue
                 print(r"\path[edge] ({}) to ({});".format(v.vid, e.other(v).vid))
 
         for b in self.graph.vertices:
@@ -231,11 +234,15 @@ class GraphInteraction():
 
         for b in self.graph.vertices:
             for e in b.edges:
+                if v.vid > e.other(v).vid:
+                    continue
                 print(r"\path[edge] ({}) to ({});".format(b.vid, e.other(b).vid))
 
         print(r"\end{tikzpicture}")
         print(r"\caption{TODO}")
+        print(r"\label{fig:TODO}")
         print(r"\end{figure}")
+        print()
 
     #
     # Dynamic Programming Algorithm
@@ -604,16 +611,16 @@ class GraphInteraction():
             s += "EDGE_WEIGHT_TYPE : EUC_2D\n"
         s += "NODE_COORD_SECTION\n"
         for v in origGraph.vertices:
-            s += "{} {} {}\n".format(v.vid + vidStart, v.pos.x, v.pos.y)
+            s += "{} {} {}\n".format(v.vid + vidStart, int(v.pos.x), int(v.pos.y))
         s += "EDGE_SECTION\n"
         for v in origGraph.vertices:
             for e in v.edges:
                 if v.vid < e.other(v).vid:
-                    s += "{} {} {}\n".format(e.a.vid + vidStart, e.b.vid + vidStart, e.cost)
+                    s += "{} {} {}\n".format(e.a.vid + vidStart, e.b.vid + vidStart, int(e.cost))
         if self.isTreeDecomposition:
             s += "BAG_COORD_SECTION\n"
             for b in self.graph.vertices:
-                s += "{} {} {}".format(b.vid + vidStart, b.pos.x, b.pos.y)
+                s += "{} {} {}".format(b.vid + vidStart, int(b.pos.x), int(b.pos.y))
                 for v in b.vertices:
                     s += " " + str(v.vid)
                 s += "\n"
