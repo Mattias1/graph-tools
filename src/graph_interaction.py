@@ -227,7 +227,7 @@ class GraphInteraction():
         #   \tikzstyle{edge} = [draw,-]
         #   \tikzstyle{arc} = [draw,->-]
         #   \tikzstyle{weight} = [font=\small]
-        z = 1 / 100
+        z = 1 / 80
         print(r"\begin{figure}")
         print(r"\centering")
         print(r"\begin{tikzpicture}[auto,swap]")
