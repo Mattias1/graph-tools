@@ -250,7 +250,7 @@ class GraphInteraction():
 
         for b in self.graph.vertices:
             for e in b.edges:
-                if v.vid > e.other(v).vid:
+                if b.vid > e.other(b).vid:
                     continue
                 print(r"\path[edge] ({}) to ({});".format(b.vid, e.other(b).vid))
 
