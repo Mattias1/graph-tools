@@ -638,7 +638,7 @@ class GraphInteraction():
             for b in self.graph.vertices:
                 s += "{} {} {}".format(b.vid + vidStart, int(b.pos.x), int(b.pos.y))
                 for v in b.vertices:
-                    s += " " + str(v.vid)
+                    s += " " + str(v.vid + vidStart)
                 s += "\n"
             s += "BAG_EDGE_SECTION\n"
             for b in self.graph.vertices:
