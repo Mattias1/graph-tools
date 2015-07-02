@@ -39,6 +39,7 @@ class GraphInteraction():
             '-': self.zoomOut,
             '+': self.zoomIn,
             '=': self.resetZoom,
+            'g': self.gridAdjust,
             'q': self.tspDP,
             'w': self.tikz,
             'Ctrl-s': self.saveAs,
@@ -196,6 +197,21 @@ class GraphInteraction():
     def resetZoom(self):
         """Reset zoom"""
         self.mainWin.scaleFactor = 1
+        self.redraw()
+
+    def gridAdjust(self):
+        """Adjust vertices that are almost horizontal or vertical"""
+        difference = 5
+        for u in self.selectedVertices:
+            for v in self.selectedVertices:
+                if u == v:
+                    continue
+                if abs(u.pos.x - v.pos.x) <= difference:
+                    u.pos.x = (u.pos.x + v.pos.x) // 2
+                    v.pos.x = u.pos.x
+                if abs(u.pos.y - v.pos.y) <= difference:
+                    u.pos.y = (u.pos.y + v.pos.y) // 2
+                    v.pos.y = u.pos.y
         self.redraw()
 
     #
