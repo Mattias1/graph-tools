@@ -232,19 +232,9 @@ class GraphInteraction():
         print(r"\centering")
         print(r"\begin{tikzpicture}[auto,swap]")
 
-        for v in self.graph.originalGraph.vertices:
-            print(r"\node[vertex{}] ({}) at ({:.2}, {:.2}) {{{}}};".format(
-                self.mainWin.settings.drawsize, v.vid, v.pos.x * z, -v.pos.y * z, v.vid
-            ))
-
-        for v in self.graph.originalGraph.vertices:
-            for e in v.edges:
-                if v.vid > e.other(v).vid:
-                    continue
-                print(r"\path[edge] ({}) to ({});".format(v.vid, e.other(v).vid))
-
+        # Tree decomposition first, so it appears in the back if overlapping
         for b in self.graph.vertices:
-            print(r"\node[bag] ({}) at ({:.2}, {:.2}) {{{}: {}}};".format(
+            print(r"\node[bag] ({}) at ({:.2f}, {:.2f}) {{{}: {}}};".format(
                 b.vid, b.pos.x * z, -b.pos.y * z, b.vid, str([v.vid for v in b.vertices])[1:-1]
             ))
 
@@ -253,6 +243,18 @@ class GraphInteraction():
                 if b.vid > e.other(b).vid:
                     continue
                 print(r"\path[edge] ({}) to ({});".format(b.vid, e.other(b).vid))
+
+        # Then the normal graph
+        for v in self.graph.originalGraph.vertices:
+            print(r"\node[vertex{}] ({}) at ({:.2f}, {:.2f}) {{{}}};".format(
+                self.mainWin.settings.drawsize, v.vid, v.pos.x * z, -v.pos.y * z, v.vid
+            ))
+
+        for v in self.graph.originalGraph.vertices:
+            for e in v.edges:
+                if v.vid > e.other(v).vid:
+                    continue
+                print(r"\path[edge] ({}) to ({});".format(v.vid, e.other(v).vid))
 
         print(r"\end{tikzpicture}")
         print(r"\caption{TODO}")
