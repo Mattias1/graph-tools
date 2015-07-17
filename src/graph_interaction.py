@@ -234,7 +234,7 @@ class GraphInteraction():
 
         # Tree decomposition first, so it appears in the back if overlapping
         for b in self.graph.vertices:
-            print(r"\node[bag] ({}) at ({:.2f}, {:.2f}) {{{}: {}}};".format(
+            print(r"\node[bag] (b-{}) at ({:.2f}, {:.2f}) {{{}: {}}};".format(
                 b.vid, b.pos.x * z, -b.pos.y * z, b.vid, str([v.vid for v in b.vertices])[1:-1]
             ))
 
@@ -242,7 +242,7 @@ class GraphInteraction():
             for e in b.edges:
                 if b.vid > e.other(b).vid:
                     continue
-                print(r"\path[edge] ({}) to ({});".format(b.vid, e.other(b).vid))
+                print(r"\path[edge] (b-{}) to (b-{});".format(b.vid, e.other(b).vid))
 
         # Then the normal graph
         for v in self.graph.originalGraph.vertices:
